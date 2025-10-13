@@ -12,7 +12,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run clang-format style check
-        uses: jidicula/clang-format-action@4.11.0
+        uses: jidicula/clang-format-action@v4.11.0
         with:
           # The version of clang-format to use.
           clang-format-version: "15"
