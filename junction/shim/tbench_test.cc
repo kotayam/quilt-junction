@@ -44,9 +44,7 @@ int getMeasureRounds() {
 }
 
 void BenchGetPid(int measure_rounds) {
-  for (int i = 0; i < measure_rounds; ++i) {
-    std::ignore = getpid();
-  }
+  for (int i = 0; i < measure_rounds; ++i) { std::ignore = getpid(); }
 }
 
 void BenchSpawnJoin(int measure_rounds) {
@@ -765,13 +763,9 @@ class ThreadingTest : public ::testing::Test {
   }
 
   static void PrintAllResults() {
-    for (const auto &[k, v] : results_) {
-      std::cerr << k << ",";
-    }
+    for (const auto &[k, v] : results_) { std::cerr << k << ","; }
     std::cerr << std::endl;
-    for (const auto &[k, v] : results_) {
-      std::cerr << v.count() << ",";
-    }
+    for (const auto &[k, v] : results_) { std::cerr << v.count() << ","; }
     std::cerr << std::endl;
   }
 };
