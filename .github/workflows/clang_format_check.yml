@@ -28,6 +28,3 @@ jobs:
           # The style to follow. The action looks for a .clang-format
           # file in your repository's root directory.
           style: file
-
-          # If true, the action will fail if any files are not formatted correctly.
-          fallback-style: "LLVM"
