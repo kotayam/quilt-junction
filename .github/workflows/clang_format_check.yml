@@ -16,3 +16,4 @@ jobs:
         with:
           clang-format-version: "20"
           check-path: "junction"
+          exclude-regex: ".*\.proto$"
