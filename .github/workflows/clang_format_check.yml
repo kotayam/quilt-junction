@@ -1,0 +1,33 @@
+name: Clang-Format Check
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+jobs:
+  clang_format_check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run clang-format style check
+        uses: jidicula/clang-format-action@4.11.0
+        with:
+          # The version of clang-format to use.
+          clang-format-version: "15"
+
+          # A list of file extensions to check.
+          extensions: "h,hpp,c,cpp"
+
+          # A space-separated list of directories to check for files.
+          # This is where you specify which directories to include.
+          # Example: 'src include tests'
+          source-dir: "junction"
+
+          # The style to follow. The action looks for a .clang-format
+          # file in your repository's root directory.
+          style: file
+
+          # If true, the action will fail if any files are not formatted correctly.
+          fallback-style: "LLVM"
