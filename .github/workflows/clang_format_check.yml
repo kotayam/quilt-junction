@@ -15,7 +15,7 @@ jobs:
         uses: jidicula/clang-format-action@v4.11.0
         with:
           # The version of clang-format to use.
-          clang-format-version: "15"
+          clang-format-version: "20"
 
           # A list of file extensions to check.
           extensions: "h,hpp,c,cpp"
