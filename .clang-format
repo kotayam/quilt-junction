@@ -6,3 +6,5 @@ UseTab: Never
 TabWidth: 2
 
 AllowShortFunctionsOnASingleLine: All
+AllowShortBlocksOnASingleLine: true
+AllowShortLoopsOnASingleLine: true

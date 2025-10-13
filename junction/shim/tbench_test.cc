@@ -269,8 +269,7 @@ void BenchSignalPingPongSigSuspend(int measure_rounds) {
 
   EXPECT_EQ(sigprocmask(SIG_BLOCK, &s, nullptr), 0);
 
-  while (!t2)
-    ;
+  while (!t2);
 
   for (int i = 0; i < measure_rounds / 2; ++i) {
     // Wait for flag
@@ -301,15 +300,13 @@ void BenchSignalPingPongSpin(int measure_rounds) {
       EXPECT_EQ(tgkill(mypid, t1, SIGUSR1), 0) << std::strerror(errno);
 
       // Wait for flag
-      while (vals[1] == i)
-        ;
+      while (vals[1] == i);
     }
   });
 
   for (int i = 0; i < measure_rounds / 2; ++i) {
     // Wait for flag
-    while (vals[0] == i)
-      ;
+    while (vals[0] == i);
 
     // send signal
     EXPECT_EQ(tgkill(mypid, t2, SIGUSR2), 0) << std::strerror(errno);
