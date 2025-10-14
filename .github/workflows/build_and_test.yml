@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Get kernel version
         id: kernel-version
@@ -35,13 +37,21 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cmake-
 
-      - name: Install kernel headers and build dependencies
+      - name: Setup kernel module build environment
         run: |
-          sudo apt-get update
-          sudo apt-get install -y linux-headers-$(uname -r) build-essential
-          sudo apt-get install -y flex bison libelf-dev libssl-dev
+          # Create symlink to ensure kernel build can find the source
+          sudo ln -sf /usr/src/linux-headers-$(uname -r) /lib/modules/$(uname -r)/build
+          # Set up ksched build directory and copy source files
+          mkdir -p lib/caladan/ksched/build
+          cp lib/caladan/ksched/*.c lib/caladan/ksched/*.h lib/caladan/ksched/build/
+          cp lib/caladan/ksched/Kbuild lib/caladan/ksched/build/
+          # Set proper permissions
+          chmod -R 755 lib/caladan/ksched
 
       - name: Run install.sh
+        env:
+          KDIR: /lib/modules/$(uname -r)/build
+          KERNEL_SRC: /usr/src/linux-headers-$(uname -r)
         run: scripts/install.sh
 
       - name: Install rust
