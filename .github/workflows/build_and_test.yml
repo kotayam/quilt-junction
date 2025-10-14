@@ -33,7 +33,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd $SCRIPT_DIR
+          cd scripts
           ./install_cereal.sh
           ./install_cmake.sh
           ./install_glibc.sh
