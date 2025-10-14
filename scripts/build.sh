@@ -9,6 +9,7 @@ SNAP_SAMPLES="OFF"
 PERMISSIVE_SECCOMP="OFF"
 DEBUG="OFF"
 WRITEABLE_LINUX_FS="OFF"
+CI="OFF"
 
 for arg in "$@"; do
     shift
@@ -18,6 +19,7 @@ for arg in "$@"; do
         '--permissive-seccomp'|'-p') PERMISSIVE_SECCOMP="ON";;
         '--writeable-linux-fs'|'-w') WRITEABLE_LINUX_FS="ON";;
         '--debug'|'-d') DEBUG="ON";;
+        '--ci'|'-c') CI="on";; 
     esac
 done
 
@@ -37,7 +39,12 @@ fi
 BIN_DIR=${ROOT_DIR}/bin
 CMAKE=${BIN_DIR}/bin/cmake
 
-. "${SCRIPT_DIR}"/submodule_check.sh
+if [ "${CI}" = "ON" ];
+then
+    . "${SCRIPT_DIR}"/submodule_check.sh --ci
+else
+    . "${SCRIPT_DIR}"/submodule_check.sh
+fi
 
 mkdir -p "$BUILD_DIR"
 cd "$BUILD_DIR"

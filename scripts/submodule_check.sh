@@ -11,9 +11,16 @@ NC='\033[0m' # No Color
 prev=$(cat "$ROOT_DIR/lib/.caladan_installed_ver" 2>&1 || true)
 cur=$(cat "$CALADAN_PATCHES_DIR"/* | sha256sum)
 
+CI="OFF"
+if [ "$1" == "--ci" ]; 
+then
+    CI="ON"
+    echo "INFO: sumodule check running in CI mode. Caladan check will be skipped."
+fi
+
 err=0
 
-if [ "$prev" != "$cur" ]; then
+if [ "$prev" != "$cur" ] && [ "${CI}" = "OFF" ]; then
 	echo -n -e "$RED"
 	echo "Patches for Caladan have been updated since last install"
 	echo "Please run scripts/install_caladan.sh to update"
