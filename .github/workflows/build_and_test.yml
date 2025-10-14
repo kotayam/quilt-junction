@@ -1,0 +1,23 @@
+name: Build and Test Junction
+
+on:
+  pull_request:
+    branches:
+      - dev
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run install.sh
+        run: "scripts/install.sh"
+
+      - name: Install rust
+        run: "curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain=nightly"
+
+      - name: Compile Junction
+        run: "scripts/build.sh"
