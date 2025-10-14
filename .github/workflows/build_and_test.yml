@@ -20,6 +20,10 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Install glibc
+        run: |
+          ./scripts/install_glibc.sh
+
       - name: Build Junction
         run: |
           ./scripts/build.sh
