@@ -13,10 +13,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Get kernel version
+        id: kernel-version
+        run: echo "KERNEL_VERSION=$(uname -r)" >> $GITHUB_ENV
+
       - name: Cache apt packages
         uses: awalsh128/cache-apt-pkgs-action@latest
         with:
-          packages: linux-headers-$(uname -r) build-essential flex bison libelf-dev libssl-dev libboost-dev libboost-program-options-dev libfmt-dev libcap-dev
+          packages: linux-headers-${{ env.KERNEL_VERSION }} build-essential flex bison libelf-dev libssl-dev libboost-dev libboost-program-options-dev libfmt-dev libcap-dev
           version: 1.0
 
       - name: Cache CMake builds
