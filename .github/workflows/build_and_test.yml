@@ -7,17 +7,23 @@ on:
       - main
 
 jobs:
-  build:
+  build_and_test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install kernel headers and build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y linux-headers-$(uname -r) build-essential
+          sudo apt-get install -y flex bison libelf-dev libssl-dev
+
       - name: Run install.sh
-        run: "scripts/install.sh"
+        run: scripts/install.sh
 
       - name: Install rust
-        run: "curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain=nightly"
+        run: curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain=nightly
 
       - name: Compile Junction
-        run: "scripts/build.sh"
+        run: scripts/build.sh
