@@ -19,7 +19,7 @@ for arg in "$@"; do
         '--permissive-seccomp'|'-p') PERMISSIVE_SECCOMP="ON";;
         '--writeable-linux-fs'|'-w') WRITEABLE_LINUX_FS="ON";;
         '--debug'|'-d') DEBUG="ON";;
-        '--ci'|'-c') CI="on";; 
+        '--ci'|'-c') CI="ON";; 
     esac
 done
 

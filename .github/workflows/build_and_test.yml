@@ -15,6 +15,11 @@ jobs:
         with:
           toolchain: 1.82
 
+      - name: Checkout submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
       - name: Extract glibc submodule commit
         run: /bin/bash -c "echo -n glibc_commit=; (git ls-tree HEAD lib/glibc | awk '{print \$3}')" >> $GITHUB_ENV
 
@@ -25,11 +30,6 @@ jobs:
             install
             lib/.glibc_installed_ver
           key: ${{ runner.os }}-build-${{ env.glibc_commit }}-install-${{ hashFiles('lib/patches/glibc/*', 'scripts/*') }}
-
-      - name: Checkout submodules
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: Install glibc
         run: |
