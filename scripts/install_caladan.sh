@@ -22,24 +22,9 @@ cur=$(cat "$CALADAN_PATCHES_DIR"/* | sha256sum)
 
 # Install Caladan
 if [ "$prev" != "$cur" ] || [ ! -f $CALADAN_DIR/deps/pcm/build/src/libpcm.a ]; then
-    # Build submodules first
-    make submodules
-
-    # Clean and build main Caladan components
-    make clean
-    make -j $(nproc)
-
-    # Build ksched after main components
-    cd ksched
-    make clean
-    KDIR=/lib/modules/$(uname -r)/build make -j $(nproc)
-    cd ..
-
-    # Run machine setup if needed (modified for CI environment)
-    if [ -f "./scripts/setup_machine.sh" ]; then
-        # Modify any system settings needed for CI
-        sudo ./scripts/setup_machine.sh || echo "Machine setup failed, but continuing..."
-    fi
+  make submodules
 fi
 
-cat $CALADAN_PATCHES_DIR/* | sha256sum > $CALADAN_DIR/../.caladan_installed_ver
+(cd ksched && make -j `nproc`)
+
+cat $CALADAN_PATCHES_DIR/* | sha256sum >  $CALADAN_DIR/../.caladan_installed_ver
