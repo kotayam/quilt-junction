@@ -37,4 +37,4 @@ jobs:
 
       - name: Build Junction
         run: |
-          ./scripts/build.sh
+          ./scripts/build.sh --ci
