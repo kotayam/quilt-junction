@@ -15,6 +15,17 @@ jobs:
         with:
           toolchain: 1.82
 
+      - name: Extract glibc submodule commit
+        run: /bin/bash -c "echo -n glibc_commit=; (git ls-tree HEAD lib/glibc | awk '{print \$3}')" >> $GITHUB_ENV
+
+      - uses: actions/cache@v4
+        name: Retrieve cached install dir
+        with:
+          path: |
+            install
+            lib/.glibc_installed_ver
+          key: ${{ runner.os }}-build-${{ env.glibc_commit }}-install-${{ hashFiles('lib/patches/glibc/*', 'scripts/*') }}
+
       - name: Checkout submodules
         uses: actions/checkout@v4
         with:
