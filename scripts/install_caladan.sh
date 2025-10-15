@@ -20,6 +20,14 @@ sudo -E apt install -y make cmake pkg-config libnl-3-dev libnl-route-3-dev libnu
 cd $CALADAN_DIR/../
 git submodule update --init --recursive -f caladan
 
+# Switch to dev branch in CI_MODE
+if [ "$CI" = true ]; then
+    echo "Switching Caladan submodule to dev branch."
+    cd $CALADAN_DIR
+    git fetch origin dev
+    git checkout dev
+fi
+
 # Apply patches
 cd $CALADAN_DIR/
 git -c user.name="x" -c user.email="x" am $CALADAN_PATCHES_DIR/*
@@ -30,13 +38,6 @@ cur=$(cat "$CALADAN_PATCHES_DIR"/* | sha256sum)
 # Install Caladan
 if [ "$prev" != "$cur" ] || [ ! -f $CALADAN_DIR/deps/pcm/build/src/libpcm.a ]; then
   make submodules
-fi
-
-# Patch Makefile if CI mode
-if [ "$CI_MODE" = true ]; then
-    echo "Patching ksched Makefile."
-    sed -i 's|M=$(BUILD_DIR) src=$(PWD)|M=$(PWD)|' ksched/Makefile
-    cat ksched/Makefile
 fi
 
 (cd ksched && make -j `nproc`)
