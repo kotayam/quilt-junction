@@ -2,7 +2,18 @@
 
 set +x
 
-CALADAN_PATCHES_DIR=${ROOT_DIR}/lib/patches/caladan
+CI_MODE=false
+if [ "$1" == "--ci" ]; 
+then
+    CI_MODE=true
+    echo "INFO: sumodule check running in CI mode."
+fi
+
+if [ "$CI_MODE" = true ]; then
+    CALADAN_PATCHES_DIR=${ROOT_DIR}/lib/patches/caladan-ci
+else
+    CALADAN_PATCHES_DIR=${ROOT_DIR}/lib/patches/caladan
+fi
 GLIBC_PATCHES_DIR=${ROOT_DIR}/lib/patches/glibc
 
 RED='\033[0;31m'
@@ -11,16 +22,10 @@ NC='\033[0m' # No Color
 prev=$(cat "$ROOT_DIR/lib/.caladan_installed_ver" 2>&1 || true)
 cur=$(cat "$CALADAN_PATCHES_DIR"/* | sha256sum)
 
-CI="OFF"
-if [ "$1" == "--ci" ]; 
-then
-    CI="ON"
-    echo "INFO: sumodule check running in CI mode. Caladan check will be skipped."
-fi
 
 err=0
 
-if [ "$prev" != "$cur" ] && [ "${CI}" = "OFF" ]; then
+if [ "$prev" != "$cur" ]; then
 	echo -n -e "$RED"
 	echo "Patches for Caladan have been updated since last install"
 	echo "Please run scripts/install_caladan.sh to update"

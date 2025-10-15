@@ -12,7 +12,7 @@ fi
 SCRIPT_DIR=$(dirname $(readlink -f $0))
 ROOT_DIR=${SCRIPT_DIR}/../
 CALADAN_DIR=${ROOT_DIR}/lib/caladan
-if [ "$CI" = true ]; then
+if [ "$CI_MODE" = true ]; then
     CALADAN_PATCHES_DIR=${ROOT_DIR}/lib/patches/caladan-ci
 else
     CALADAN_PATCHES_DIR=${ROOT_DIR}/lib/patches/caladan
@@ -25,7 +25,7 @@ cd $CALADAN_DIR/../
 git submodule update --init --recursive -f caladan
 
 # Switch to dev branch in CI_MODE
-if [ "$CI" = true ]; then
+if [ "$CI_MODE" = true ]; then
     echo "Switching Caladan submodule to dev branch."
     cd $CALADAN_DIR
     git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
@@ -36,7 +36,7 @@ fi
 
 # Apply patches
 cd $CALADAN_DIR/
-if [ "$CI" = true ]; then
+if [ "$CI_MODE" = true ]; then
     echo "Applying patches with 'git apply' for CI..."
     git apply --reject --whitespace=fix $CALADAN_PATCHES_DIR/* || true
 
