@@ -32,7 +32,23 @@ fi
 
 # Apply patches
 cd $CALADAN_DIR/
-git -c user.name="x" -c user.email="x" am $CALADAN_PATCHES_DIR/*
+if [ "$CI" = true ]; then
+    echo "Applying patches with 'git apply' for CI..."
+    git apply --reject --whitespace=fix $CALADAN_PATCHES_DIR/*
+
+    echo "--- Checking for failed patch rejects (.rej files) ---"
+    REJECT_FILES=$(find . -name "*.rej")
+    if [ -n "$REJECT_FILES" ]; then
+        echo "Patch application failed. Displaying reject file contents:"
+        for file in $REJECT_FILES; do
+            echo "--- Contents of $file ---"
+            cat "$file"
+            echo "--------------------------"
+        done
+        exit 1
+else
+    git -c user.name="x" -c user.email="x" am $CALADAN_PATCHES_DIR/*
+fi
 
 prev=$(cat "$ROOT_DIR/lib/.caladan_installed_ver" 2>&1 || true)
 cur=$(cat "$CALADAN_PATCHES_DIR"/* | sha256sum)
