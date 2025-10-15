@@ -55,6 +55,7 @@ jobs:
       - name: Patch Caladan Makefile
         run: |
           sed -i 's|M=$(BUILD_DIR) src=$(PWD)|M=$(PWD)|' lib/caladan/ksched/Makefile
+          cat lib/caladan/ksched/Makefile
 
       - name: Install dependencies
         run: |
