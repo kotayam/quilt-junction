@@ -52,6 +52,10 @@ jobs:
             bin/node_modules
           key: ${{ runner.os }}-build-venv-${{ hashFiles('scripts/install_function_bench.sh') }}
 
+      - name: Patch Caladan Makefile
+        run: |
+          sed -i 's|M=$(BUILD_DIR) src=$(PWD)|M=$(PWD)|' lib/caladan/ksched/Makefile
+
       - name: Install dependencies
         run: |
           sudo apt-get update
