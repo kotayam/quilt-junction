@@ -32,7 +32,7 @@ jobs:
           path: |
             install
             lib/.glibc_installed_ver
-          key: ${{ runner.os }}-build-${{ env.glibc_commit }}-install-${{ hashFiles('lib/patches/glibc/*', 'scripts/*') }}
+          key: ${{ runner.os }}-build-${{ env.glibc_commit }}-install-${{ hashFiles('lib/patches/glibc/*', 'scripts/install_glibc.sh', 'scripts/install.sh') }}
 
       - name: Retrieve cached caladan submodule binaries
         uses: actions/cache@v4
