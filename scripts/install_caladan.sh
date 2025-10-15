@@ -24,9 +24,10 @@ git submodule update --init --recursive -f caladan
 if [ "$CI" = true ]; then
     echo "Switching Caladan submodule to dev branch."
     cd $CALADAN_DIR
+    git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
     git fetch origin dev
     git branch -a
-    git checkout -b dev --track origin/dev
+    git checkout dev
 fi
 
 # Apply patches
