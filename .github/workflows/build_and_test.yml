@@ -23,23 +23,43 @@ jobs:
       - name: Extract glibc submodule commit
         run: /bin/bash -c "echo -n glibc_commit=; (git ls-tree HEAD lib/glibc | awk '{print \$3}')" >> $GITHUB_ENV
 
-      - uses: actions/cache@v4
-        name: Retrieve cached install dir
+      - name: Extract caladan submodule commit
+        run: /bin/bash -c "echo -n caladan_commit=; (git ls-tree HEAD lib/caladan | awk '{print \$3}')" >> $GITHUB_ENV
+
+      - name: Retrieve cached install dir
+        uses: actions/cache@v4
         with:
           path: |
             install
             lib/.glibc_installed_ver
           key: ${{ runner.os }}-build-${{ env.glibc_commit }}-install-${{ hashFiles('lib/patches/glibc/*', 'scripts/*') }}
 
+      - name: Retrieve cached caladan submodule binaries
+        uses: actions/cache@v4
+        with:
+          path: |
+            lib/caladan/dpdk/build
+            lib/caladan/rdma-core/build
+            lib/caladan/deps/pcm/build
+            lib/.caladan_installed_ver
+          key: ${{ runner.os }}-build-${{ env.caladan_commit }}-caladan-${{ hashFiles('lib/patches/caladan/*') }}
+
+      - name: Retrieve cached python venv
+        uses: actions/cache@v4
+        with:
+          path: |
+            bin/venv
+            bin/node_modules
+          key: ${{ runner.os }}-build-venv-${{ hashFiles('scripts/install_function_bench.sh') }}
+
       - name: Install dependencies
         run: |
-          cd scripts
-          ./install_cereal.sh
-          ./install_cmake.sh
-          ./install_glibc.sh
-          ./install_flatbuffers.sh
-          ./install_function_bench.sh
+          sudo apt-get update
+          sudo apt-get install -y gcc-12 g++-12
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 10
+          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 10
+          ./scripts/install.sh
 
       - name: Build Junction
         run: |
-          ./scripts/build.sh --ci
+          ./scripts/build.sh
