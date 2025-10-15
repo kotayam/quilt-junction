@@ -29,15 +29,17 @@ git submodule update --init --recursive --jobs=`nproc`
 cd $SCRIPT_DIR
 ./install_cereal.sh
 ./install_cmake.sh
-./install_flatbuffers.sh
-./install_glibc.sh
-
 if [ "$CI_MODE" = true ]; then
     ./install_caladan.sh --ci
 else
     ./install_caladan.sh
+fi
+./install_glibc.sh
+./install_flatbuffers.sh
+if [ "$CI_MODE" = false ]; then
     ./install_function_bench.sh
 fi
+
 
 
 
