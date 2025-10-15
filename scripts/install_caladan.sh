@@ -25,7 +25,7 @@ if [ "$CI" = true ]; then
     echo "Switching Caladan submodule to dev branch."
     cd $CALADAN_DIR
     git fetch origin dev
-    git checkout dev
+    git checkout origin/dev
 fi
 
 # Apply patches
