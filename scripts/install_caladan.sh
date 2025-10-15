@@ -34,7 +34,7 @@ fi
 cd $CALADAN_DIR/
 if [ "$CI" = true ]; then
     echo "Applying patches with 'git apply' for CI..."
-    git apply --reject --whitespace=fix $CALADAN_PATCHES_DIR/*
+    git apply --reject --whitespace=fix $CALADAN_PATCHES_DIR/* || true
 
     echo "--- Checking for failed patch rejects (.rej files) ---"
     REJECT_FILES=$(find . -name "*.rej")
