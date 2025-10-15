@@ -52,18 +52,13 @@ jobs:
             bin/node_modules
           key: ${{ runner.os }}-build-venv-${{ hashFiles('scripts/install_function_bench.sh') }}
 
-      - name: Patch Caladan Makefile
-        run: |
-          sed -i 's|M=$(BUILD_DIR) src=$(PWD)|M=$(PWD)|' lib/caladan/ksched/Makefile
-          cat lib/caladan/ksched/Makefile
-
       - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc-12 g++-12
           sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 10
           sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 10
-          ./scripts/install.sh
+          ./scripts/install.sh --ci
 
       - name: Build Junction
         run: |

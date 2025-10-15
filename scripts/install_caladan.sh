@@ -1,6 +1,13 @@
 #!/bin/bash
 set -xe
 
+# Get flags
+CI_MODE=false
+if [ "$1" == "--ci" ]; then
+    CI_MODE=true
+    echo "Running in CI mode: Makefile will be patched."
+fi
+
 # Globals
 SCRIPT_DIR=$(dirname $(readlink -f $0))
 ROOT_DIR=${SCRIPT_DIR}/../
@@ -23,6 +30,13 @@ cur=$(cat "$CALADAN_PATCHES_DIR"/* | sha256sum)
 # Install Caladan
 if [ "$prev" != "$cur" ] || [ ! -f $CALADAN_DIR/deps/pcm/build/src/libpcm.a ]; then
   make submodules
+fi
+
+# Patch Makefile if CI mode
+if [ "$CI_MODE" = true ]; then
+    echo "Patching ksched Makefile."
+    sed -i 's|M=$(BUILD_DIR) src=$(PWD)|M=$(PWD)|' ksched/Makefile
+    cat ksched/Makefile
 fi
 
 (cd ksched && make -j `nproc`)
