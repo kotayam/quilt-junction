@@ -46,6 +46,9 @@ if [ "$CI" = true ]; then
             echo "--------------------------"
         done
         exit 1
+    else
+        echo "Path applied successfully."
+    fi
 else
     git -c user.name="x" -c user.email="x" am $CALADAN_PATCHES_DIR/*
 fi
