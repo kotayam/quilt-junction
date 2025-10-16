@@ -55,11 +55,17 @@ fi
 mkdir -p "$BUILD_DIR"
 cd "$BUILD_DIR"
 
+CMAKE_ARGS="-DWRITEABLE_LINUX_FS=${WRITEABLE_LINUX_FS} \
+            -DPERMISSIVE_SECCOMP=${PERMISSIVE_SECCOMP} \
+            -DSNAPSHOT_SAMPLES=${SNAP_SAMPLES} \
+            -DCMAKE_BUILD_TYPE=${BUILD_TYPE} .."
+
 if [ "${CI}" = "ON" ]; then
     echo "CI MODE: using gcc 12 explicitly."
-    export CC=gcc-12
-    export CXX=g++-12
+    CMAKE_ARGS="-D CMAKE_C_COMPILER=gcc-12 \
+                -D CMAKE_CXX_COMPILER=g++-12 \
+                ${CMAKE_ARGS}"
 fi
 
-$CMAKE -DWRITEABLE_LINUX_FS="${WRITEABLE_LINUX_FS}" -DPERMISSIVE_SECCOMP="${PERMISSIVE_SECCOMP}" -DSNAPSHOT_SAMPLES="${SNAP_SAMPLES}" -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" ..
+$CMAKE $CMAKE_ARGS
 make -j "$(nproc)"
