@@ -42,6 +42,11 @@ CMAKE=${BIN_DIR}/bin/cmake
 if [ "${CI}" = "ON" ];
 then
     . "${SCRIPT_DIR}"/submodule_check.sh --ci
+
+    echo "CI Mode: Patching Junction's Caladan API calls..."
+    TARGET_FILE="${ROOT_DIR}/junction/bindings/net.h"
+    sed -i 's/raddr, peek, nonblocking);/raddr, peek, nonblocking, nullptr);/' "$TARGET_FILE"
+    sed -i 's/raddr, nonblocking);/raddr, nonblocking, nullptr);/' "$TARGET_FILE"
 else
     . "${SCRIPT_DIR}"/submodule_check.sh
 fi
