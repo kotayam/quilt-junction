@@ -45,8 +45,9 @@ then
 
     echo "CI Mode: Patching Junction's Caladan API calls..."
     TARGET_FILE="${ROOT_DIR}/junction/bindings/net.h"
-    sed -i '/udp_readv_from2/s/peek, nonblocking);/peek, nonblocking, nullptr);/' "$TARGET_FILE"
-    sed -i '/udp_writev_to2/s/raddr, nonblocking);/raddr, nonblocking, nullptr);/' "$TARGET_FILE"
+    sed -i -E '/udp_readv_from2/,/peek, nonblocking\);/ s/peek, nonblocking\);/peek, nonblocking, nullptr\);/' "$TARGET_FILE"
+    sed -i -E '/udp_writev_to2/,/raddr, nonblocking\);/ s/raddr, nonblocking\);/raddr, nonblocking, nullptr\);/' "$TARGET_FILE"
+    cat "$TARGET_FILE" 
 else
     . "${SCRIPT_DIR}"/submodule_check.sh
 fi
