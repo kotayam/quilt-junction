@@ -56,7 +56,7 @@ index 3c80761..e8713a7 100644
  /*
   * High-level routines, use this API most of the time.
 diff --git a/runtime/defs.h b/runtime/defs.h
-index e61c50c..97d169b 100644
+index e61c50c..a095d29 100644
 --- a/runtime/defs.h
 +++ b/runtime/defs.h
 @@ -40,6 +40,8 @@
@@ -68,11 +68,10 @@ index e61c50c..97d169b 100644
  
  /*
   * Thread support
-@@ -71,7 +73,23 @@ struct stack {
- 	uintptr_t       usable[STACK_PTR_SIZE];
+@@ -72,6 +74,23 @@ struct stack {
  };
  
--DECLARE_PERTHREAD(struct tcache_perthread, stack_pt);
+ DECLARE_PERTHREAD(struct tcache_perthread, stack_pt);
 +DECLARE_PERTHREAD(void *, runtime_stack);
 +
 +static __always_inline void *stack_to_tcache_handle(struct stack *s)
@@ -93,7 +92,7 @@ index e61c50c..97d169b 100644
  
  /**
   * stack_alloc - allocates a stack
-@@ -85,7 +103,7 @@ static inline struct stack *stack_alloc(void)
+@@ -85,7 +104,7 @@ static inline struct stack *stack_alloc(void)
  	void *s = tcache_alloc(perthread_ptr(stack_pt));
  	if (unlikely(!s))
  		return NULL;
@@ -102,7 +101,7 @@ index e61c50c..97d169b 100644
  }
  
  /**
-@@ -94,7 +112,7 @@ static inline struct stack *stack_alloc(void)
+@@ -94,7 +113,7 @@ static inline struct stack *stack_alloc(void)
   */
  static inline void stack_free(struct stack *s)
  {
@@ -111,7 +110,7 @@ index e61c50c..97d169b 100644
  }
  
  #define RSP_ALIGNMENT	16
-@@ -122,6 +140,17 @@ static inline uint64_t stack_init_to_rsp(struct stack *s, void (*exit_fn)(void))
+@@ -122,6 +141,17 @@ static inline uint64_t stack_init_to_rsp(struct stack *s, void (*exit_fn)(void))
  {
  	uint64_t rsp;
  
@@ -129,7 +128,7 @@ index e61c50c..97d169b 100644
  	s->usable[STACK_PTR_SIZE - 1] = (uintptr_t)exit_fn;
  	rsp = (uint64_t)&s->usable[STACK_PTR_SIZE - 1];
  	assert_rsp_aligned(rsp);
-@@ -142,7 +171,7 @@ static inline uint64_t
+@@ -142,7 +172,7 @@ static inline uint64_t
  stack_init_to_rsp_with_buf(struct stack *s, void **buf, size_t buf_len,
  			   void (*exit_fn)(void))
  {
