@@ -1,15 +1,15 @@
 #include <array>
 #include <fstream>
 #include <iostream>
+#include <string>
 
 constexpr const char* CHANNEL_PATH = "/serverless/chan0";
-constexpr size_t BUF_SIZE = 1024;
-constexpr int WARMUP_COUNT = 10;
+constexpr const char* SNAPSHOT_REQ = "SNAPSHOT_PREPARE";
+constexpr const char* OK = "OK";
 
 namespace {
 
 std::fstream channel;
-std::array<char, BUF_SIZE> read_buf;
 
 bool OpenChannel() {
   channel.open(CHANNEL_PATH);
@@ -25,18 +25,22 @@ bool OpenChannel() {
 
 bool Warmup() {
   std::cout << "Handling warmup process\n";
-  int i = 0;
-  while (i < WARMUP_COUNT) {
-    channel.read(read_buf.data(), read_buf.size());
-    std::streamsize bytes_read = channel.gcount();
-
-    if (bytes_read <= 0) {
+  std::string request_line;
+  while (true) {
+    if (!std::getline(channel, request_line)) {
       std::cerr << "Failed to read warmup request\n";
       return false;
     }
-    std::cout << "Recieved request: " << read_buf.data() << "\n";
-    i++;
+
+    std::cout << "Recieved request: " << request_line << "\n";
+    if (request_line == SNAPSHOT_REQ) {
+      channel << OK << "\n";
+      std::cout << "Sent snapsho OK response.\n";
+    } else {
+      channel << "Processed: " << request_line << "\n";
+    }
   }
+  std::cout << "Completed warmup process\n";
   return true;
 }
 
