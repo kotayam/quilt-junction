@@ -3,7 +3,9 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include <cstdint>
 #include <iostream>
+#include <vector>
 
 constexpr int PORT = 43;
 constexpr const char* HOST = "192.168.127.7";
@@ -39,11 +41,41 @@ bool ConnectToServer() {
 void CloseConnection() { close(fd); }
 
 bool WriteRequest(const std::string& req) {
+  std::cout << "Sending: " << req << "\n";
   const char* data = req.c_str();
+  uint64_t len = req.length();
+
+  if (write(fd, &len, sizeof(len)) != sizeof(len)) {
+    std::cerr << "Failed to write length header\n";
+    return false;
+  }
+
+  if (write(fd, data, len) != len) {
+    std::cerr << "Failed to write data\n";
+    return false;
+  }
   return true;
 }
 
-bool ReadResponse(std::string& response) { return true; }
+bool ReadResponse(std::string& res) {
+  uint64_t len = 0;
+  if (read(fd, &len, sizeof(len)) != sizeof(len)) {
+    std::cerr << "Failed to read response length\n";
+    return false;
+  }
+
+  if (len == 0) { return true; }
+
+  std::vector<char> buffer(len);
+  if (read(fd, buffer.data(), len) != len) {
+    std::cerr << "Failed to read response data\n";
+    return false;
+  }
+
+  res = std::string(buffer.data(), len);
+  std::cout << "Server Response: " << res << "\n";
+  return true;
+}
 
 }  // namespace
 
