@@ -21,7 +21,7 @@ ${caladan_config_common}"
 set(caladan_function_config_path
     ${CMAKE_CURRENT_BINARY_DIR}/caladan_function.config
 )
-file(WRITE ${caldan_function_config_path} ${caladan_function_config})
+file(WRITE ${caladan_function_config_path} ${caladan_function_config})
 
 # function
 add_executable(function 
