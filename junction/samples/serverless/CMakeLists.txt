@@ -25,3 +25,6 @@ file(WRITE ${caladan_function_config_path} ${caladan_function_config})
 add_executable(function 
     function.cc
 )
+
+# client
+add_executable(client client.cc)
