@@ -1,62 +1,52 @@
+#include <array>
 #include <fstream>
 #include <iostream>
-#include <string>
 
-// The "magic" file that the Junction serverless implementation provides.
-#define CHANNEL_PATH "/serverless/chan0"
+constexpr const char* CHANNEL_PATH = "/serverless/chan0";
+constexpr size_t BUF_SIZE = 1024;
+constexpr int WARMUP_COUNT = 10;
 
-int main() {
-  std::string line;
-  char read_buf[1024];
-  char write_buf[1024];
-  ssize_t bytes_read;
-  int fd;
+namespace {
 
-  // Open the channel for both reading and writing.
-  // This is the C equivalent of the app getting its "port".
-  fd = open(CHANNEL_PATH, O_RDWR);
-  if (fd < 0) {
-    perror("Failed to open serverless channel");
-    return 1;
+std::fstream channel;
+std::array<char, BUF_SIZE> read_buf;
+
+bool OpenChannel() {
+  channel.open(CHANNEL_PATH);
+
+  if (!channel.is_open()) {
+    std::cerr << "Failed to open serverless channel\n";
+    return false;
   }
+  return true;
+}
 
-  printf("Function process started. Waiting for requests on %s\n",
-         CHANNEL_PATH);
-
-  // This is the main serverless loop, processing one request at a time.
-  while (1) {
-    // Clear the read buffer
-    memset(read_buf, 0, sizeof(read_buf));
-
-    // 1. READ REQUEST
-    // This read() call will BLOCK and sleep until the junction
-    // runtime provides a request.
-    printf("Waiting for next request...\n");
-    bytes_read = read(fd, read_buf, sizeof(read_buf) - 1);
+bool Warmup() {
+  int i = 0;
+  while (i < WARMUP_COUNT) {
+    channel.read(read_buf.data(), read_buf.size());
+    std::streamsize bytes_read = channel.gcount();
 
     if (bytes_read <= 0) {
-      // Error or channel closed
-      perror("Error reading from channel");
-      break;
+      std::cerr << "Failed to read warmup request\n";
+      return false;
     }
-
-    // The 'serverless.cc' code adds a newline. We'll strip it.
-    if (read_buf[bytes_read - 1] == '\n') { read_buf[bytes_read - 1] = '\0'; }
-
-    printf("Received request: '%s'\n", read_buf);
-
-    // 2. PROCESS LOGIC
-    // Our "business logic" is to create a greeting string.
-    // snprintf(write_buf, sizeof(write_buf), "Hello, %s!", read_buf);
-    sprintf(write_buf, "OK");
-
-    // 3. WRITE RESPONSE
-    // This write() call sends the response back to the junction
-    // runtime and unblocks the waiting ChannelWorker.
-    printf("Sending response: '%s'\n", write_buf);
-    write(fd, write_buf, strlen(write_buf));
+    std::cout << "Recieved request: " << read_buf.data() << "\n";
+    i++;
   }
+  return true;
+}
 
-  close(fd);
+void CloseChannel() { channel.close(); }
+
+}  // namespace
+
+int main() {
+  if (!OpenChannel()) { return 1; }
+
+  Warmup();
+
+  CloseChannel();
+
   return 0;
 }
