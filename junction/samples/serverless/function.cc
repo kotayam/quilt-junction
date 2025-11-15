@@ -18,10 +18,13 @@ bool OpenChannel() {
     std::cerr << "Failed to open serverless channel\n";
     return false;
   }
+  std::cout << "Function process started. Waiting for requests on "
+            << CHANNEL_PATH << "\n";
   return true;
 }
 
 bool Warmup() {
+  std::cout << "Handling warmup process\n";
   int i = 0;
   while (i < WARMUP_COUNT) {
     channel.read(read_buf.data(), read_buf.size());
