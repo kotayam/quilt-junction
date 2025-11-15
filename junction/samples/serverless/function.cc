@@ -34,8 +34,8 @@ bool Warmup() {
 
     std::cout << "Recieved request: " << request_line << "\n";
     if (request_line == SNAPSHOT_REQ) {
-      channel << OK << "\n";
-      std::cout << "Sent snapsho OK response.\n";
+      channel << OK;
+      std::cout << "Sent snapshot OK response.\n";
     } else {
       channel << "Processed: " << request_line << "\n";
     }
