@@ -25,23 +25,31 @@ bool OpenChannel() {
 
 bool Warmup() {
   std::cout << "Handling warmup process\n";
-  std::string request_line;
+  std::string req_line;
   while (true) {
-    if (!std::getline(channel, request_line)) {
+    if (!std::getline(channel, req_line)) {
       std::cerr << "Failed to read warmup request\n";
       return false;
     }
 
-    std::cout << "Recieved request: " << request_line << "\n";
-    if (request_line == SNAPSHOT_REQ) {
+    std::cout << "Recieved request: " << req_line << "\n";
+    if (req_line == SNAPSHOT_REQ) {
       channel << OK;
       std::cout << "Sent snapshot OK response.\n";
     } else {
-      channel << "Processed: " << request_line << "\n";
+      channel << "Processed: " << req_line << "\n";
     }
   }
   std::cout << "Completed warmup process\n";
   return true;
+}
+
+void Function() {
+  std::string req_line;
+  while (std::getline(channel, req_line)) {
+    std::string res = "Echo: " + req_line;
+    channel << res;
+  }
 }
 
 void CloseChannel() { channel.close(); }
@@ -52,6 +60,8 @@ int main() {
   if (!OpenChannel()) { return 1; }
 
   Warmup();
+
+  Function();
 
   CloseChannel();
 
