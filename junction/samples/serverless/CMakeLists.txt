@@ -6,11 +6,9 @@ set(caladan_config_common
 host_gateway 192.168.127.1
 runtime_kthreads 1
 runtime_spinning_kthreads 0
-runtime_guaranteed_kthreads 1
+runtime_guaranteed_kthreads 0
 runtime_priority lc
-runtime_quantum_us 0
-enable_directpath 1
-host_mtu 9000"
+runtime_quantum_us 0"
 )
 
 set(caladan_function_config

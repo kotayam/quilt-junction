@@ -5,5 +5,6 @@
 ### Function
 
 ```bash
-./build/junction/junction_run ./build/junction/samples/serverless/caladan_function.config --function_arg warmup_data --keep_alive -- ./build/junction/samples/serverless/function
+cd ./build/junction
+./junction_run ./samples/serverless/caladan_function.config --function_arg warmup_data --keep_alive -- ./samples/serverless/function
 ```
