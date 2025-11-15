@@ -4,11 +4,17 @@
 
 ### Function
 
-This will start the serverless function.
+This will warmup the serverless function.
 
 ```bash
 cd ./build/junction
-./junction_run ./samples/serverless/caladan_function.config --function_arg warmup_data --keep_alive -- ./samples/serverless/function
+./junction_run ./samples/serverless/caladan_function.config --function_name sample --function_arg warmup_data -- ./samples/serverless/function
+```
+
+After the warmup completes, run in restored mode.
+
+```bash
+./junction_run ./samples/serverless/caladan_function.config --restore --function_name sample --function_arg restore -- .metadata .elf
 ```
 
 ### Client
