@@ -43,12 +43,20 @@ bool Warmup() {
   return true;
 }
 
-void Function() {
+bool Function() {
+  std::cout << "Waiting for request..." << std::endl;
   std::string req_line;
-  while (std::getline(channel, req_line)) {
+  while (true) {
+    if (!std::getline(channel, req_line)) {
+      std::cerr << "Failed to read request" << std::endl;
+      return false;
+    }
+    std::cout << "Recieved request: " << req_line << std::endl;
     std::string res = "Echo: " + req_line;
     channel << res;
+    std::cout << "Processed: " << req_line << std::endl;
   }
+  return true;
 }
 
 void CloseChannel() { channel.close(); }
@@ -58,9 +66,15 @@ void CloseChannel() { channel.close(); }
 int main() {
   if (!OpenChannel()) { return 1; }
 
-  Warmup();
+  if (!Warmup()) {
+    CloseChannel();
+    return 1;
+  }
 
-  Function();
+  if (!Function()) {
+    CloseChannel();
+    return 1;
+  }
 
   CloseChannel();
 
