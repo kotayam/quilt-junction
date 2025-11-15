@@ -14,7 +14,7 @@ bool OpenChannel() {
   channel.open(CHANNEL_PATH);
 
   if (!channel.is_open()) {
-    std::cerr << "Failed to open serverless channel\n";
+    std::cerr << "Failed to open serverless channel" << std::endl;
     return false;
   }
   std::cout << "Function process started. Waiting for requests on "
@@ -23,23 +23,23 @@ bool OpenChannel() {
 }
 
 bool Warmup() {
-  std::cout << "Handling warmup process\n";
+  std::cout << "Handling warmup process" << std::endl;
   std::string req_line;
   while (true) {
     if (!std::getline(channel, req_line)) {
-      std::cerr << "Failed to read warmup request\n";
+      std::cerr << "Failed to read warmup request" << std::endl;
       return false;
     }
 
-    std::cout << "Recieved request: " << req_line << "\n";
+    std::cout << "Recieved request: " << req_line << std::endl;
     if (req_line == SNAPSHOT_REQ) {
       channel << OK;
-      std::cout << "Sent snapshot OK response.\n";
+      std::cout << "Sent snapshot OK response." << std::endl;
     } else {
-      channel << "Processed: " << req_line << "\n";
+      channel << "Processed: " << req_line;
     }
   }
-  std::cout << "Completed warmup process\n";
+  std::cout << "Completed warmup process" << std::endl;
   return true;
 }
 
