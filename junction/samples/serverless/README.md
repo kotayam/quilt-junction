@@ -17,7 +17,7 @@ Open a new terminal and send request to the serverless channel.
 
 ```bash
 cd ./build/junction
-./client "Your Message"
+./samples/serverless/client "Your Message"
 ```
 
 You should see the server response if it was successful.
