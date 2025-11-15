@@ -1,4 +1,3 @@
-#include <array>
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -19,7 +18,7 @@ bool OpenChannel() {
     return false;
   }
   std::cout << "Function process started. Waiting for requests on "
-            << CHANNEL_PATH << "\n";
+            << CHANNEL_PATH << std::endl;
   return true;
 }
 
