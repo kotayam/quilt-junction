@@ -15,7 +15,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y clang-format-20
-          sudo update-alternative --install /usr/bin/clang-format clang-format /usr/bin/clang-format-20 100
+          sudo update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-20 100
 
       - name: Run formatting check script
         run: ./scripts/fmt_check.sh
