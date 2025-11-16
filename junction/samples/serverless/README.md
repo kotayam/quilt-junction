@@ -23,7 +23,7 @@ Open a new terminal and send request to the serverless channel.
 
 ```bash
 cd ./build/junction
-./samples/serverless/client "Your Message"
+./junction_run ./samples/serverless/caladan_client.config -- ./samples/serverless/client "your request"
 ```
 
 You should see the server response if it was successful.
