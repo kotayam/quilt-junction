@@ -11,7 +11,7 @@ cd ./build/junction
 ./junction_run ./samples/serverless/caladan_function.config --function_name sample --function_arg warmup_data -- ./samples/serverless/function
 ```
 
-After the warmup completes, run in restored mode.
+After the warmup completes, run in restored mode to continue from the main function.
 
 ```bash
 ./junction_run ./samples/serverless/caladan_function.config --restore --function_name sample --function_arg restore -- .metadata .elf
