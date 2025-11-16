@@ -23,7 +23,9 @@ Open a new terminal and send request to the serverless channel.
 
 ```bash
 cd ./build/junction
-./junction_run ./samples/serverless/caladan_client.config -- ./samples/serverless/client "your request"
+./junction_run ./samples/serverless/caladan_client.config -- ./samples/serverless/client "GET /user/0"
 ```
+
+The server is able to get or add users. The valid requests are "GET /user/{id}" and "POST /user {name}".
 
 You should see the server response if it was successful.
