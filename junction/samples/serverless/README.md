@@ -4,6 +4,10 @@ A simple implementation of a mock FaaS.
 
 ## Junction
 
+### Prepare
+
+Make sure you have built junction using `scripts/build.sh` and the scheduler is running.
+
 ### Function
 
 This will warmup the function.
