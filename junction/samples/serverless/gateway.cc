@@ -87,7 +87,8 @@ void ProcessRequest(int client_fd) {
     return;
   }
 
-  std::cout << "[Gateway] Received" << n << " bytes from client.\n";
+  std::cout << "[Gateway] Received: " << buffer << " (" << n
+            << " bytes) from client.\n";
 
   if (!ConnectToFunctionServer()) {
     close(client_fd);
