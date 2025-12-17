@@ -16,7 +16,12 @@ set(caladan_function_config
 ${caladan_config_common}"
 )
 
-set(caladan_client_config
+# set(caladan_client_config
+# "host_addr 192.168.127.5
+# ${caladan_config_common}"
+# )
+
+set(caladan_gateway_config
 "host_addr 192.168.127.5
 ${caladan_config_common}"
 )
@@ -26,10 +31,15 @@ set(caladan_function_config_path
 )
 file(WRITE ${caladan_function_config_path} ${caladan_function_config})
 
-set(caladan_client_config_path
-    ${CMAKE_CURRENT_BINARY_DIR}/caladan_client.config
+# set(caladan_client_config_path
+#     ${CMAKE_CURRENT_BINARY_DIR}/caladan_client.config
+# )
+# file(WRITE ${caladan_client_config_path} ${caladan_client_config})
+
+set(caladan_gateway_config_path
+    ${CMAKE_CURRENT_BINARY_DIR}/caladan_gateway.config
 )
-file(WRITE ${caladan_client_config_path} ${caladan_client_config})
+file(WRITE ${caladan_gateway_config_path} ${caladan_gateway_config})
 
 # function
 add_executable(function 
@@ -37,4 +47,7 @@ add_executable(function
 )
 
 # client
-add_executable(client client.cc)
+# add_executable(client client.cc)
+
+# gateway
+add_executable(gateway gateway.cc)
