@@ -69,6 +69,7 @@ bool Router() {
     std::cerr << "Failed to read request\n";
     return false;
   }
+  std::cout << std::unitbuf << "Recieved request: " << req_line << "\n";
 
   std::string res;
   std::stringstream ss(req_line);
