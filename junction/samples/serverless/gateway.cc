@@ -94,13 +94,23 @@ void ProcessRequest(int client_fd) {
     return;
   }
 
-  write(func_fd, buffer, n);
+  if (write(func_fd, buffer, n) < 0) {
+    std::cerr << "[Gateway] Failed to write to function server\n";
+    close(func_fd);
+    close(client_fd);
+    return;
+  }
 
   // read response from function server
   n = read(func_fd, buffer, sizeof(buffer));
   if (n > 0) {
     // send response to client
-    write(client_fd, buffer, n);
+    if (write(client_fd, buffer, n) < 0) {
+      std::cerr << "[Gateway] Failed to write back to client\n";
+      close(func_fd);
+      close(client_fd);
+      return;
+    }
     std::cout << "[Gateway] Forwarded response to client.\n";
   }
 
