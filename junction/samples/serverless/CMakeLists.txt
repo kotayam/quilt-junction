@@ -3,7 +3,6 @@ message(STATUS "Building junction sample: serverless")
 # Generate test configurations
 set(caladan_config_common
 "host_netmask 255.255.255.0
-host_gateway 192.168.127.1
 runtime_kthreads 1
 runtime_spinning_kthreads 0
 runtime_guaranteed_kthreads 0
@@ -13,16 +12,19 @@ runtime_quantum_us 0"
 
 set(caladan_function_config
 "host_addr 192.168.127.7
+host_gateway 192.168.127.1
 ${caladan_config_common}"
 )
 
 set(caladan_client_config
-"host_addr 192.168.127.3
+"host_addr 10.10.1.2
+host_gateway 10.10.1.1
 ${caladan_config_common}"
 )
 
 set(caladan_gateway_config
-"host_addr 192.168.127.5
+"host_addr 10.10.1.1
+host_gateway 10.10.1.2
 ${caladan_config_common}"
 )
 
