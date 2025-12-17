@@ -1,14 +1,22 @@
+#include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <unistd.h>
 
+#include <cstdio>
 #include <iostream>
+#include <thread>
 
 constexpr int GATEWAY_PORT = 8080;
 constexpr const char *FUNCTION_IP = "192.168.127.7";
 constexpr int FUNCTION_PORT = 43;
 
 namespace {
+
 int gw_fd;
+sockaddr_in gw_addr;
+int addrlen;
+int func_fd;
 
 bool InitGateway() {
   gw_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -24,13 +32,12 @@ bool InitGateway() {
     return false;
   }
 
-  sockaddr_in gw_addr;
   gw_addr.sin_family = AF_INET;
   gw_addr.sin_addr.s_addr = INADDR_ANY;
   gw_addr.sin_port = htons(GATEWAY_PORT);
+  addrlen = sizeof(gw_addr);
 
-  if (bind(gw_fd, reinterpret_cast<sockaddr *>(&gw_addr), sizeof(gw_addr)) <
-      0) {
+  if (bind(gw_fd, reinterpret_cast<sockaddr *>(&gw_addr), addrlen) < 0) {
     std::cerr << "Failed to bind socket\n";
     return false;
   }
@@ -40,14 +47,85 @@ bool InitGateway() {
     return false;
   }
 
+  std::cout << "Standard Gateway listening on port " << GATEWAY_PORT << "\n";
   return true;
 }
 
-bool HandleRequest() {}
+bool ConnectToFunctionServer() {
+  func_fd = socket(AF_INET, SOCK_STREAM, 0);
+  if (func_fd < 0) {
+    std::cerr << "Failed to create socket with function server\n";
+    return false;
+  }
+
+  sockaddr_in server_addr;
+  server_addr.sin_family = AF_INET;
+  server_addr.sin_port = htons(FUNCTION_PORT);
+  if (inet_pton(AF_INET, FUNCTION_IP, &server_addr.sin_addr) <= 0) {
+    std::cerr << "Failed to set function server IP address\n";
+    close(func_fd);
+    return false;
+  }
+
+  std::cout << "Connecting to " << FUNCTION_IP << ":" << FUNCTION_PORT
+            << "...\n";
+  if (connect(func_fd, reinterpret_cast<sockaddr *>(&server_addr),
+              sizeof(server_addr)) < 0) {
+    std::cerr << "Failed to connect to function server\n";
+    close(func_fd);
+    return false;
+  }
+
+  return true;
+}
+
+void ProcessRequest(int client_fd) {
+  char buffer[4096];
+  ssize_t n = read(client_fd, buffer, sizeof(buffer));
+  if (n <= 0) {
+    close(client_fd);
+    return;
+  }
+
+  std::cout << "[Gateway] Received" << n << " bytes from client.\n";
+
+  if (!ConnectToFunctionServer()) {
+    close(client_fd);
+    return;
+  }
+
+  write(func_fd, buffer, n);
+
+  // read response from function server
+  n = read(func_fd, buffer, sizeof(buffer));
+  if (n > 0) {
+    // send response to client
+    write(client_fd, buffer, n);
+    std::cout << "[Gateway] Forwarded response to client.\n";
+  }
+
+  close(func_fd);
+  close(client_fd);
+}
+
+void HandleRequest() {
+  while (true) {
+    int new_socket = accept(gw_fd, reinterpret_cast<sockaddr *>(&gw_addr),
+                            reinterpret_cast<socklen_t *>(&addrlen));
+    if (new_socket < 0) {
+      std::cerr << "Failed to accept new socket\n";
+      continue;
+    }
+
+    std::thread(ProcessRequest, new_socket).detach();
+  }
+}
 }  // namespace
 
 int main() {
   if (!InitGateway()) { return 1; }
+
+  HandleRequest();
 
   return 0;
 }
