@@ -4,6 +4,7 @@
 #include <unistd.h>
 
 #include <cstdio>
+#include <ios>
 #include <iostream>
 #include <thread>
 
@@ -47,7 +48,8 @@ bool InitGateway() {
     return false;
   }
 
-  std::cout << "Standard Gateway listening on port " << GATEWAY_PORT << "\n";
+  std::cout << std::unitbuf << "Standard Gateway listening on port "
+            << GATEWAY_PORT << "\n";
   return true;
 }
 
@@ -67,8 +69,8 @@ bool ConnectToFunctionServer() {
     return false;
   }
 
-  std::cout << "Connecting to " << FUNCTION_IP << ":" << FUNCTION_PORT
-            << "...\n";
+  std::cout << std::unitbuf << "Connecting to " << FUNCTION_IP << ":"
+            << FUNCTION_PORT << "...\n";
   if (connect(func_fd, reinterpret_cast<sockaddr *>(&server_addr),
               sizeof(server_addr)) < 0) {
     std::cerr << "Failed to connect to function server\n";
@@ -93,7 +95,7 @@ void ProcessRequest(int client_fd) {
     n--;
   }
 
-  std::cout << "[Gateway] Received: " << buffer << " (" << n
+  std::cout << std::unitbuf << "[Gateway] Received: " << buffer << " (" << n
             << " bytes) from client.\n";
 
   if (!ConnectToFunctionServer()) {
@@ -119,7 +121,7 @@ void ProcessRequest(int client_fd) {
       close(client_fd);
       return;
     }
-    std::cout << "[Gateway] Forwarded response to client.\n";
+    std::cout << std::unitbuf << "[Gateway] Forwarded response to client.\n";
   }
 
   close(func_fd);

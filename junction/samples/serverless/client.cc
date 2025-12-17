@@ -29,8 +29,8 @@ bool ConnectToServer() {
     return false;
   }
 
-  std::cout << "Connecting to " << FUNCTION_IP << ":" << FUNCTION_PORT
-            << "...\n";
+  std::cout << std::unitbuf << "Connecting to " << FUNCTION_IP << ":"
+            << FUNCTION_PORT << "...\n";
   if (connect(fd, reinterpret_cast<sockaddr *>(&server_addr),
               sizeof(server_addr)) < 0) {
     std::cerr << "Failed to connect to server\n";
@@ -42,7 +42,7 @@ bool ConnectToServer() {
 void CloseConnection() { close(fd); }
 
 bool WriteRequest(const std::string &req) {
-  std::cout << "Sending: " << req << "\n";
+  std::cout << std::unitbuf << "Sending: " << req << "\n";
   const char *data = req.c_str();
   uint64_t len = req.length();
 
@@ -74,7 +74,7 @@ bool ReadResponse(std::string &res) {
   }
 
   res = std::string(buffer.data(), len);
-  std::cout << "Server Response: " << res << "\n";
+  std::cout << std::unitbuf << "Server Response: " << res << "\n";
   return true;
 }
 
