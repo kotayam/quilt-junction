@@ -3,9 +3,9 @@ message(STATUS "Building junction sample: serverless")
 # Generate test configurations
 set(caladan_config_common
 "host_netmask 255.255.255.0
-runtime_kthreads 1
+runtime_kthreads 4
 runtime_spinning_kthreads 0
-runtime_guaranteed_kthreads 1
+runtime_guaranteed_kthreads 4
 runtime_priority lc
 runtime_quantum_us 0"
 )
