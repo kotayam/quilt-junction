@@ -16,32 +16,32 @@ bool OpenChannel() {
   channel.open(CHANNEL_PATH);
 
   if (!channel.is_open()) {
-    std::cerr << "Failed to open serverless channel" << std::endl;
+    std::cerr << "Failed to open serverless channel\n";
     return false;
   }
   std::cout << "Function process started. Waiting for requests on "
-            << CHANNEL_PATH << std::endl;
+            << CHANNEL_PATH << "\n";
   return true;
 }
 
 bool Warmup() {
-  std::cout << "Handling warmup process" << std::endl;
+  std::cout << "Handling warmup process\n";
   std::string req_line;
   while (true) {
     if (!std::getline(channel, req_line)) {
-      std::cerr << "Failed to read warmup request" << std::endl;
+      std::cerr << "Failed to read warmup request\n";
       return false;
     }
 
-    std::cout << "Recieved request: " << req_line << std::endl;
+    std::cout << "Recieved request: " << req_line << "\n";
     if (req_line == SNAPSHOT_REQ) {
       channel << OK;
-      std::cout << "Sent snapshot OK response." << std::endl;
+      std::cout << "Sent snapshot OK response.\n";
       break;
     }
     channel << "Processed: " << req_line;
   }
-  std::cout << "Completed warmup process" << std::endl;
+  std::cout << "Completed warmup process\n";
   return true;
 }
 
@@ -65,7 +65,7 @@ void AddUserHandler(const std::string &name) {
 bool Router() {
   std::string req_line;
   if (!std::getline(channel, req_line)) {
-    std::cerr << "Failed to read request" << std::endl;
+    std::cerr << "Failed to read request\n";
     return false;
   }
 
