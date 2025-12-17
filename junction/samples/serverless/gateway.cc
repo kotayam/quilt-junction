@@ -48,8 +48,8 @@ bool InitGateway() {
     return false;
   }
 
-  std::cout << std::unitbuf << "Standard Gateway listening on port "
-            << GATEWAY_PORT << "\n";
+  std::cout << std::unitbuf << "[Gateway] Listening on port " << GATEWAY_PORT
+            << "\n";
   return true;
 }
 
@@ -69,7 +69,7 @@ bool ConnectToFunctionServer() {
     return false;
   }
 
-  std::cout << std::unitbuf << "Connecting to " << FUNCTION_IP << ":"
+  std::cout << std::unitbuf << "[Gateway] Connecting to " << FUNCTION_IP << ":"
             << FUNCTION_PORT << "...\n";
   if (connect(func_fd, reinterpret_cast<sockaddr *>(&server_addr),
               sizeof(server_addr)) < 0) {
@@ -78,7 +78,7 @@ bool ConnectToFunctionServer() {
     return false;
   }
 
-  std::cout << std::unitbuf << "Connected to " << FUNCTION_IP << ":"
+  std::cout << std::unitbuf << "[Gateway] Connected to " << FUNCTION_IP << ":"
             << FUNCTION_PORT << "\n";
   return true;
 }
