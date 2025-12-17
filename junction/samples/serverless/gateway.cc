@@ -25,12 +25,12 @@ bool InitGateway() {
     return false;
   }
 
-  int opt = 1;
-  if (setsockopt(gw_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt,
-                 sizeof(opt)) < 0) {
-    std::cerr << "Failed to set socket options\n";
-    return false;
-  }
+  // int opt = 1;
+  // if (setsockopt(gw_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt,
+  //                sizeof(opt)) < 0) {
+  //   std::cerr << "Failed to set socket options\n";
+  //   return false;
+  // }
 
   gw_addr.sin_family = AF_INET;
   gw_addr.sin_addr.s_addr = INADDR_ANY;
