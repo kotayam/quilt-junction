@@ -78,6 +78,8 @@ bool ConnectToFunctionServer() {
     return false;
   }
 
+  std::cout << std::unitbuf << "Connected to " << FUNCTION_IP << ":"
+            << FUNCTION_PORT << "\n";
   return true;
 }
 
@@ -110,10 +112,14 @@ void ProcessRequest(int client_fd) {
     close(client_fd);
     return;
   }
+  std::cout << std::unitbuf << "[Gateway] Wrote request to function server\n";
 
   // read response from function server
-  n = read(func_fd, buffer, sizeof(buffer));
+  std::cout << std::unitbuf
+            << "[Gateway] Waiting for response from function server...\n";
+  n = read(func_fd, buffer, sizeof(buffer) - 1);
   if (n > 0) {
+    buffer[n] = '\0';
     // send response to client
     if (write(client_fd, buffer, n) < 0) {
       std::cerr << "[Gateway] Failed to write back to client\n";
