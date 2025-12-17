@@ -5,10 +5,11 @@ set(caladan_config_common
 "host_netmask 255.255.255.0
 runtime_kthreads 1
 runtime_spinning_kthreads 0
-runtime_guaranteed_kthreads 0
+runtime_guaranteed_kthreads 1
 runtime_priority lc
 runtime_quantum_us 0
-enable_directpath 1"
+enable_directpath 1
+host_mtu 9000"
 )
 
 set(caladan_function_config
