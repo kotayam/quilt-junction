@@ -8,7 +8,18 @@ A simple implementation of a mock FaaS.
 
 Make sure you have built junction using `scripts/build.sh` and the scheduler is running.
 
+### Gateway
+
+This will run the gateway.
+
+```bash
+cd ./build/junction
+./junction_run ./samples/serverless/caladan_gateway.config --function_name gateway --keep_alive -- ./samples/serverless/gateway
+```
+
 ### Function
+
+Open a new terminal and follow these steps.
 
 This will warmup the function.
 
@@ -25,7 +36,7 @@ After the warmup completes, run in restored mode to continue from the main funct
 
 ### Client
 
-Open a new terminal and send request to the serverless channel.
+Open a new terminal and send request directly to the serverless channel.
 
 ```bash
 cd ./build/junction
