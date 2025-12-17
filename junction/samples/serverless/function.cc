@@ -64,12 +64,14 @@ void AddUserHandler(const std::string &name) {
 }
 
 bool Router() {
+  std::cout << std::unitbuf << "[Router] Waiting for request...\n";
   std::string req_line;
   if (!std::getline(channel, req_line)) {
     std::cerr << "Failed to read request\n";
     return false;
   }
-  std::cout << std::unitbuf << "Recieved request: " << req_line << "\n";
+  std::cout << std::unitbuf << "[Router] Recieved request: " << req_line
+            << "\n";
 
   std::string res;
   std::stringstream ss(req_line);
