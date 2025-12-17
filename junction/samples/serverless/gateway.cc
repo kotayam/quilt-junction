@@ -11,6 +11,7 @@
 constexpr int GATEWAY_PORT = 8080;
 constexpr const char *FUNCTION_IP = "10.10.1.3";
 constexpr int FUNCTION_PORT = 43;
+constexpr int REQ_BUF_SIZE = 4096;
 
 namespace {
 
@@ -83,13 +84,13 @@ bool ConnectToFunctionServer() {
   return true;
 }
 
-bool WriteRequestToFunc(const char *buf, ssize_t len) {
-  if (write(func_fd, &len, sizeof(len)) != sizeof(len)) {
+bool WriteRequestToFunc(const char *buf, ssize_t req_len) {
+  if (write(func_fd, &req_len, sizeof(req_len)) != sizeof(req_len)) {
     std::cerr << "Failed to write length header\n";
     return false;
   }
 
-  if (write(func_fd, buf, len) != len) {
+  if (write(func_fd, buf, req_len) != req_len) {
     std::cerr << "Failed to write data\n";
     return false;
   }
@@ -98,26 +99,26 @@ bool WriteRequestToFunc(const char *buf, ssize_t len) {
   return true;
 }
 
-bool ReadResponseFromFunc(char *buf) {
+ssize_t ReadResponseFromFunc(char *buf) {
   std::cout << std::unitbuf
             << "[Gateway] Waiting for response from function server...\n";
-  uint64_t len = 0;
+  ssize_t len = 0;
   if (read(func_fd, &len, sizeof(len)) != sizeof(len)) {
     std::cerr << "Failed to read response lenght\n";
-    return false;
+    return -1;
   }
 
-  if (len == 0) { return true; }
+  if (len == 0) { return 0; }
   if (read(func_fd, buf, len) != len) {
     std::cerr << "Failed to read response data\n";
-    return false;
+    return -1;
   }
-  return true;
+  return len;
 }
 
 ssize_t ReadRequestFromClient(int client_fd, char *buf) {
   std::cout << std::unitbuf << "[Gateway] Waiting for request from client...\n";
-  ssize_t n = read(client_fd, buf, sizeof(buf) - 1);
+  ssize_t n = read(client_fd, buf, REQ_BUF_SIZE - 1);
   if (n <= 0) {
     std::cerr << "Failed to read request from client\n";
     close(client_fd);
@@ -135,8 +136,8 @@ ssize_t ReadRequestFromClient(int client_fd, char *buf) {
   return n;
 }
 
-bool WriteResponseToClient(int client_fd, const char *buf) {
-  if (write(client_fd, buf, sizeof(buf)) < 0) {
+bool WriteResponseToClient(int client_fd, const char *buf, ssize_t res_len) {
+  if (write(client_fd, buf, res_len) < 0) {
     std::cerr << "[Gateway] Failed to write back to client\n";
     return false;
   }
@@ -145,9 +146,9 @@ bool WriteResponseToClient(int client_fd, const char *buf) {
 }
 
 void ProcessRequest(int client_fd) {
-  char buffer[4096];
-  ssize_t n = ReadRequestFromClient(client_fd, buffer);
-  if (n < 0) {
+  char buffer[REQ_BUF_SIZE];
+  ssize_t req_len = ReadRequestFromClient(client_fd, buffer);
+  if (req_len < 0) {
     close(client_fd);
     return;
   }
@@ -157,19 +158,19 @@ void ProcessRequest(int client_fd) {
     return;
   }
 
-  if (!WriteRequestToFunc(buffer, n)) {
+  if (!WriteRequestToFunc(buffer, req_len)) {
+    close(func_fd);
+    close(client_fd);
+    return;
+  }
+  ssize_t res_len = ReadResponseFromFunc(buffer);
+  if (res_len < 0) {
     close(func_fd);
     close(client_fd);
     return;
   }
 
-  if (!ReadResponseFromFunc(buffer)) {
-    close(func_fd);
-    close(client_fd);
-    return;
-  }
-
-  if (!WriteResponseToClient(client_fd, buffer)) {}
+  if (!WriteResponseToClient(client_fd, buffer, res_len)) {}
 
   close(func_fd);
   close(client_fd);
