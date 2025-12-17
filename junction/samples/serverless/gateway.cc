@@ -81,10 +81,16 @@ bool ConnectToFunctionServer() {
 
 void ProcessRequest(int client_fd) {
   char buffer[4096];
-  ssize_t n = read(client_fd, buffer, sizeof(buffer));
+  ssize_t n = read(client_fd, buffer, sizeof(buffer) - 1);
   if (n <= 0) {
     close(client_fd);
     return;
+  }
+  buffer[n] = '\0';
+  // strip new line character at end
+  if (buffer[n - 1] == '\n') {
+    buffer[n - 1] = '\0';
+    n--;
   }
 
   std::cout << "[Gateway] Received: " << buffer << " (" << n
