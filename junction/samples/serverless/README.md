@@ -6,7 +6,9 @@ A simple implementation of a mock FaaS.
 
 ### Prepare
 
-Make sure you have built junction using `scripts/build.sh` and the scheduler is running.
+In order to simulate this experiment, it requires two separate machine that can talk within a private IP address (e.g. two nodes in a CloudLab experiment).
+
+Make sure you have built junction using `scripts/build.sh` and the scheduler is running. The scheduler should be bound to the NIC which is setup for the private IP communication. You may need to set the status of the NIC to DOWN to do this.
 
 ### Gateway
 
@@ -35,6 +37,17 @@ After the warmup completes, run in restored mode to continue from the main funct
 ```
 
 ### Client
+
+From a different machine, you can simply create a TCP connection with the gateway by using tools like netcat.
+
+```bash
+nc -v <gateway IP> 8080
+GET /user/0
+```
+
+### Client (Junction Instance)
+
+Only run this if you would like to run the client as a junction instance and directly communicate with the function channel.
 
 Open a new terminal and send request directly to the serverless channel.
 
