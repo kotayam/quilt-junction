@@ -8,7 +8,7 @@
 #include <vector>
 
 constexpr int FUNCTION_PORT = 43;
-constexpr const char *FUNCTION_IP = "10.10.1.1";
+constexpr const char *FUNCTION_IP = "10.10.1.3";
 
 namespace {
 

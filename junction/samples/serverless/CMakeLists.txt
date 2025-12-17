@@ -11,7 +11,7 @@ runtime_quantum_us 0"
 )
 
 set(caladan_function_config
-"host_addr 10.10.1.1
+"host_addr 10.10.1.3
 host_gateway 10.10.1.2
 ${caladan_config_common}"
 )
