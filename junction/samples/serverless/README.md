@@ -36,6 +36,9 @@ After the warmup completes, run in restored mode to continue from the main funct
 ./junction_run ./samples/serverless/caladan_function.config --restore --function_name function --function_arg restore --keep_alive -- .metadata .elf
 ```
 
+The function is able to get or add users. The valid requests are `GET /user/{id}` and `POST /user {name}`.  
+You should see the server response if it was successful.
+
 ### Client
 
 From a different machine, you can simply create a TCP connection with the gateway by using tools like netcat.
@@ -43,6 +46,9 @@ From a different machine, you can simply create a TCP connection with the gatewa
 ```bash
 nc -v <gateway IP> 8080
 GET /user/0
+
+nc -v <gateway IP> 8080
+POST /user/ <name>
 ```
 
 ### Client (Junction Instance)
@@ -56,5 +62,3 @@ cd ./build/junction
 ./junction_run ./samples/serverless/caladan_client.config -- ./samples/serverless/client "GET /user/0"
 ```
 
-The server is able to get or add users. The valid requests are "GET /user/{id}" and "POST /user {name}".  
-You should see the server response if it was successful.
