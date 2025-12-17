@@ -7,8 +7,8 @@
 #include <iostream>
 #include <vector>
 
-constexpr int PORT = 43;
-constexpr const char *HOST = "192.168.127.7";
+constexpr int FUNCTION_PORT = 43;
+constexpr const char *FUNCTION_IP = "10.10.1.1";
 
 namespace {
 
@@ -23,13 +23,14 @@ bool ConnectToServer() {
 
   sockaddr_in server_addr;
   server_addr.sin_family = AF_INET;
-  server_addr.sin_port = htons(PORT);
-  if (inet_pton(AF_INET, HOST, &server_addr.sin_addr) <= 0) {
+  server_addr.sin_port = htons(FUNCTION_PORT);
+  if (inet_pton(AF_INET, FUNCTION_IP, &server_addr.sin_addr) <= 0) {
     std::cerr << "Failed to set server IP address\n";
     return false;
   }
 
-  std::cout << "Connecting to " << HOST << ":" << PORT << "...\n";
+  std::cout << "Connecting to " << FUNCTION_IP << ":" << FUNCTION_PORT
+            << "...\n";
   if (connect(fd, reinterpret_cast<sockaddr *>(&server_addr),
               sizeof(server_addr)) < 0) {
     std::cerr << "Failed to connect to server\n";

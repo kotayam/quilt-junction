@@ -8,7 +8,7 @@
 #include <thread>
 
 constexpr int GATEWAY_PORT = 8080;
-constexpr const char *FUNCTION_IP = "192.168.127.7";
+constexpr const char *FUNCTION_IP = "10.10.1.1";
 constexpr int FUNCTION_PORT = 43;
 
 namespace {
