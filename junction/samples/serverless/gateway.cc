@@ -94,6 +94,7 @@ void ProcessRequest(int client_fd) {
     return;
   }
 
+  // write request to function server
   if (write(func_fd, buffer, n) < 0) {
     std::cerr << "[Gateway] Failed to write to function server\n";
     close(func_fd);
