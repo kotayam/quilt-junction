@@ -83,52 +83,93 @@ bool ConnectToFunctionServer() {
   return true;
 }
 
-void ProcessRequest(int client_fd) {
-  char buffer[4096];
-  ssize_t n = read(client_fd, buffer, sizeof(buffer) - 1);
-  if (n <= 0) {
-    close(client_fd);
-    return;
+bool WriteRequestToFunc(const char *buf, ssize_t len) {
+  if (write(func_fd, &len, sizeof(len)) != sizeof(len)) {
+    std::cerr << "Failed to write length header\n";
+    return false;
   }
-  buffer[n] = '\0';
+
+  if (write(func_fd, buf, len) != len) {
+    std::cerr << "Failed to write data\n";
+    return false;
+  }
+
+  std::cout << std::unitbuf << "[Gateway] Wrote request to function server\n";
+  return true;
+}
+
+bool ReadResponseFromFunc(char *buf) {
+  std::cout << std::unitbuf
+            << "[Gateway] Waiting for response from function server...\n";
+  uint64_t len = 0;
+  if (read(func_fd, &len, sizeof(len)) != sizeof(len)) {
+    std::cerr << "Failed to read response lenght\n";
+    return false;
+  }
+
+  if (len == 0) { return true; }
+  if (read(func_fd, buf, len) != len) {
+    std::cerr << "Failed to read response data\n";
+    return false;
+  }
+  return true;
+}
+
+ssize_t ReadRequestFromClient(int client_fd, char *buf) {
+  std::cout << std::unitbuf << "[Gateway] Waiting for request from client...\n";
+  ssize_t n = read(client_fd, buf, sizeof(buf) - 1);
+  if (n <= 0) {
+    std::cerr << "Failed to read request from client\n";
+    close(client_fd);
+    return -1;
+  }
+  buf[n] = '\0';
   // strip new line character at end
-  if (buffer[n - 1] == '\n') {
-    buffer[n - 1] = '\0';
+  if (buf[n - 1] == '\n') {
+    buf[n - 1] = '\0';
     n--;
   }
 
-  std::cout << std::unitbuf << "[Gateway] Received: " << buffer << " (" << n
+  std::cout << std::unitbuf << "[Gateway] Received: " << buf << " (" << n
             << " bytes) from client.\n";
+  return n;
+}
+
+bool WriteResponseToClient(int client_fd, const char *buf) {
+  if (write(client_fd, buf, sizeof(buf)) < 0) {
+    std::cerr << "[Gateway] Failed to write back to client\n";
+    return false;
+  }
+  std::cout << std::unitbuf << "[Gateway] Forwarded response to client.\n";
+  return true;
+}
+
+void ProcessRequest(int client_fd) {
+  char buffer[4096];
+  ssize_t n = ReadRequestFromClient(client_fd, buffer);
+  if (n < 0) {
+    close(client_fd);
+    return;
+  }
 
   if (!ConnectToFunctionServer()) {
     close(client_fd);
     return;
   }
 
-  // write request to function server
-  if (write(func_fd, buffer, n) < 0) {
-    std::cerr << "[Gateway] Failed to write to function server\n";
+  if (!WriteRequestToFunc(buffer, n)) {
     close(func_fd);
     close(client_fd);
     return;
   }
-  std::cout << std::unitbuf << "[Gateway] Wrote request to function server\n";
 
-  // read response from function server
-  std::cout << std::unitbuf
-            << "[Gateway] Waiting for response from function server...\n";
-  n = read(func_fd, buffer, sizeof(buffer) - 1);
-  if (n > 0) {
-    buffer[n] = '\0';
-    // send response to client
-    if (write(client_fd, buffer, n) < 0) {
-      std::cerr << "[Gateway] Failed to write back to client\n";
-      close(func_fd);
-      close(client_fd);
-      return;
-    }
-    std::cout << std::unitbuf << "[Gateway] Forwarded response to client.\n";
+  if (!ReadResponseFromFunc(buffer)) {
+    close(func_fd);
+    close(client_fd);
+    return;
   }
+
+  if (!WriteResponseToClient(client_fd, buffer)) {}
 
   close(func_fd);
   close(client_fd);
@@ -143,6 +184,7 @@ void HandleRequest() {
       continue;
     }
 
+    // TODO: mutex for fd
     std::thread(ProcessRequest, new_socket).detach();
   }
 }
