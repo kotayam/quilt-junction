@@ -18,7 +18,7 @@ std::string GetUserHandler(int user_id) {
 std::string AddUserHandler(const std::string &name) {
   users_db.insert({count, name});
   count++;
-  return fmt::format("Added \\{{}: {}\\}", count, name);
+  return fmt::format("Added {{{}: {}}}", count, name);
 }
 
 std::string UserLogic(const std::string &method, const std::string &path,
