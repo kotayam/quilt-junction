@@ -6,13 +6,13 @@
 #include <unistd.h>
 
 #include <cstdio>
+#include <cstring>
 #include <ios>
 #include <iostream>
 #include <thread>
 
 constexpr const char *GATEWAY_IP = "10.10.1.1";
 constexpr int GATEWAY_PORT = 8080;
-constexpr const char *FUNCTION_IP = "10.10.1.3";
 constexpr int FUNCTION_PORT = 43;
 constexpr int REQ_BUF_SIZE = 4096;
 constexpr int RES_BUF_SIZE = 1024;
@@ -58,23 +58,39 @@ bool InitGateway() {
   return true;
 }
 
-bool ConnectToFunctionServer() {
+/**
+ * @brief Connect to function server
+ *
+ * @return
+ */
+bool ConnectToFunctionServer(const char *buf) {
   func_fd = socket(AF_INET, SOCK_STREAM, 0);
   if (func_fd < 0) {
-    std::cerr << "Failed to create socket with function server\n";
+    std::cerr << "Failed to create socket for function server\n";
+    return false;
+  }
+
+  // route to correct function server
+  std::string function_ip;
+  if (std::strstr(buf, "/user") != nullptr) {
+    function_ip = "10.10.1.3";
+  } else if (std::strstr(buf, "/followers") != nullptr) {
+    function_ip = "10.10.1.4";
+  } else {
+    std::cerr << "Invalid request to function server\n";
     return false;
   }
 
   sockaddr_in server_addr;
   server_addr.sin_family = AF_INET;
   server_addr.sin_port = htons(FUNCTION_PORT);
-  if (inet_pton(AF_INET, FUNCTION_IP, &server_addr.sin_addr) <= 0) {
+  if (inet_pton(AF_INET, function_ip.c_str(), &server_addr.sin_addr) <= 0) {
     std::cerr << "Failed to set function server IP address\n";
     close(func_fd);
     return false;
   }
 
-  std::cout << std::unitbuf << "[Gateway] Connecting to " << FUNCTION_IP << ":"
+  std::cout << std::unitbuf << "[Gateway] Connecting to " << function_ip << ":"
             << FUNCTION_PORT << "...\n";
   if (connect(func_fd, reinterpret_cast<sockaddr *>(&server_addr),
               sizeof(server_addr)) < 0) {
@@ -83,7 +99,7 @@ bool ConnectToFunctionServer() {
     return false;
   }
 
-  std::cout << std::unitbuf << "[Gateway] Connected to " << FUNCTION_IP << ":"
+  std::cout << std::unitbuf << "[Gateway] Connected to " << function_ip << ":"
             << FUNCTION_PORT << "\n";
   return true;
 }
@@ -157,7 +173,7 @@ void ProcessRequest(int client_fd) {
     return;
   }
 
-  if (!ConnectToFunctionServer()) {
+  if (!ConnectToFunctionServer(buffer)) {
     close(client_fd);
     return;
   }
