@@ -4,19 +4,19 @@
 #include <unordered_map>
 
 namespace {
-std::unordered_map<int, std::string> users = {
+std::unordered_map<int, std::string> users_db = {
     {0, "Alice"}, {1, "Bob"}, {2, "Carrol"}, {3, "David"}};
 int count = 4;
 
 std::string GetUserHandler(int user_id) {
   try {
-    std::string user = users.at(user_id);
+    std::string user = users_db.at(user_id);
     return user;
   } catch (...) { return "User not found"; }
 }
 
 std::string AddUserHandler(const std::string &name) {
-  users.insert({count, name});
+  users_db.insert({count, name});
   count++;
   return fmt::format("Added \\{{}: {}\\}", count, name);
 }
