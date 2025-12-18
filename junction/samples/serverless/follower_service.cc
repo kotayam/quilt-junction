@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "junction/samples/serverless/gateway.h"
+#include "junction/samples/serverless/watchdog.h"
 
 namespace {
 std::unordered_map<int, std::vector<int>> followers_db = {
@@ -39,6 +40,7 @@ std::string FollowerLogic(const std::string &method, const std::string &path,
 }  // namespace
 
 int main() {
-  // TODO: call watchdog with follower logic
+  WatchDog w("follower", FollowerLogic);
+  w.Run();
   return 0;
 }

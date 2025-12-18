@@ -3,6 +3,8 @@
 #include <string>
 #include <unordered_map>
 
+#include "junction/samples/serverless/watchdog.h"
+
 namespace {
 std::unordered_map<int, std::string> users_db = {
     {0, "Alice"}, {1, "Bob"}, {2, "Carrol"}, {3, "David"}};
@@ -37,6 +39,7 @@ std::string UserLogic(const std::string &method, const std::string &path,
 }  // namespace
 
 int main() {
-  // TODO: call watchdog with user logic
+  WatchDog w("user", UserLogic);
+  w.Run();
   return 0;
 }

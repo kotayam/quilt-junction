@@ -5,14 +5,17 @@
 #include <string>
 #include <thread>
 
-constexpr const char *CHANNEL_PATH = "/serverless/chan0";
+constexpr const char *CHANNEL_PATH_BASE = "/serverless/";
 constexpr const char *SNAPSHOT_REQ = "SNAPSHOT_PREPARE";
 constexpr const char *OK = "OK";
 
-WatchDog::WatchDog(RequestHandler h) : handler_(std::move(h)) {}
+WatchDog::WatchDog(const std::string &name, RequestHandler h)
+    : handler_(std::move(h)) {
+  chan_path_ = CHANNEL_PATH_BASE + name;
+}
 
 bool WatchDog::OpenChannel() {
-  channel_.open(CHANNEL_PATH);
+  channel_.open(chan_path_);
 
   if (!channel_.is_open()) {
     std::cerr << "[Watchdog] Failed to open serverless channel\n";
@@ -20,7 +23,7 @@ bool WatchDog::OpenChannel() {
   }
   std::cout << std::unitbuf
             << "[Watchdog] Function process started. Waiting for requests on "
-            << CHANNEL_PATH << "\n";
+            << chan_path_ << "\n";
   return true;
 }
 

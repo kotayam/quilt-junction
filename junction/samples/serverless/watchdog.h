@@ -11,10 +11,11 @@ using RequestHandler = std::function<std::string(const std::string &method,
 
 class WatchDog {
  public:
-  explicit WatchDog(RequestHandler h);
+  explicit WatchDog(const std::string &name, RequestHandler h);
   void Run();
 
  private:
+  std::string chan_path_;
   RequestHandler handler_;
   std::fstream channel_;
   std::mutex chan_mutex_;
