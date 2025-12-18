@@ -130,6 +130,7 @@ void JunctionMain(int argc, char *argv[]) {
 
   std::shared_ptr<Process> proc;
   std::string function_arg = GetCfg().GetArg("function_arg");
+  std::string function_name = GetCfg().GetArg("function_name");
 
   if (GetCfg().restoring()) {
     if (unlikely(argc < 2)) {
@@ -157,7 +158,7 @@ void JunctionMain(int argc, char *argv[]) {
     timings().first_function_start = Time::Now();
   } else if (!args.empty()) {
     if (!function_arg.empty()) {
-      Status<void> ret = SetupServerlessChannel(0);
+      Status<void> ret = SetupServerlessChannel(function_name);
       if (unlikely(!ret)) {
         LOG(ERR) << "failed to setup channel";
         syscall_exit(-1);

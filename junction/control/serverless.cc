@@ -19,7 +19,7 @@ constexpr uint64_t kChannelPort = 43;
 class FunctionInode;
 
 rt::SharedMutex lock_;
-std::unordered_map<int, std::shared_ptr<FunctionInode>> channels_;
+std::unordered_map<std::string, std::shared_ptr<FunctionInode>> channels_;
 
 std::string from_byte_span(std::span<const std::byte> byte_span) {
   return std::string(reinterpret_cast<const char *>(byte_span.data()),
@@ -296,18 +296,18 @@ Status<std::shared_ptr<File>> FunctionInode::Open(
   return std::make_shared<FunctionChannelFile>(flags, mode, std::move(dent));
 }
 
-std::shared_ptr<FunctionInode> get_channel(int chan) {
+std::shared_ptr<FunctionInode> get_channel(const std::string &name) {
   rt::ScopedSharedLock g(lock_);
-  auto it = channels_.find(chan);
+  auto it = channels_.find(name);
   if (it == channels_.end()) return {};
   return it->second;
 }
 
-Status<void> SetupServerlessChannel(int chan) {
+Status<void> SetupServerlessChannel(const std::string &name) {
   FSRoot &fs = FSRoot::GetGlobalRoot();
   rt::ScopedLock g(lock_);
 
-  if (channels_.count(chan) > 0) return MakeError(EEXIST);
+  if (channels_.count(name) > 0) return MakeError(EEXIST);
 
   Status<std::shared_ptr<Inode>> srvdir = LookupInode(fs, "/serverless");
   IDir *dir;
@@ -318,10 +318,10 @@ Status<void> SetupServerlessChannel(int chan) {
     dir = memfs::MkFolder(*fs.get_root().get(), "serverless").get();
   }
 
-  std::shared_ptr<FunctionInode> fino = std::make_shared<FunctionInode>(chan);
-  Status<void> ret = dir->Link(std::format("chan{}", chan), fino);
+  std::shared_ptr<FunctionInode> fino = std::make_shared<FunctionInode>(name);
+  Status<void> ret = dir->Link(name, fino);
   if (!ret) return ret;
-  channels_.emplace(chan, std::move(fino));
+  channels_.emplace(name, std::move(fino));
   return {};
 }
 
@@ -352,9 +352,9 @@ void PrintTimes(const std::vector<uint64_t> &times, std::string_view name) {
   LOG(ERR) << ss.str();
 }
 
-void RunRestored(std::shared_ptr<Process> proc, int chan_id,
+void RunRestored(std::shared_ptr<Process> proc, const std::string &name,
                  std::string_view arg) {
-  std::shared_ptr<FunctionInode> fino = get_channel(chan_id);
+  std::shared_ptr<FunctionInode> fino = get_channel(name);
   if (unlikely(!fino)) {
     LOG(ERR) << "Missing serverless channel";
     syscall_exit(-1);
@@ -408,9 +408,9 @@ void RunRestored(std::shared_ptr<Process> proc, int chan_id,
   syscall_exit(0);
 }
 
-void WarmupAndSnapshot(std::shared_ptr<Process> proc, int chan_id,
+void WarmupAndSnapshot(std::shared_ptr<Process> proc, const std::string &name,
                        std::string_view arg) {
-  std::shared_ptr<FunctionInode> fino = get_channel(chan_id);
+  std::shared_ptr<FunctionInode> fino = get_channel(name);
   if (unlikely(!fino)) {
     LOG(ERR) << "Missing serverless channel";
     syscall_exit(-1);
@@ -442,21 +442,21 @@ void WarmupAndSnapshot(std::shared_ptr<Process> proc, int chan_id,
   syscall_exit(0);
 }
 
-std::string InvokeChan(int chan, std::string arg) {
-  std::shared_ptr<FunctionInode> fino = get_channel(chan);
+std::string InvokeChan(const std::string &name, std::string arg) {
+  std::shared_ptr<FunctionInode> fino = get_channel(name);
   assert(fino);
   return fino->get_chan().DoRequest(arg);
 }
 
-pid_t GetLastBlockedTid(int chan) {
-  std::shared_ptr<FunctionInode> fino = get_channel(chan);
+pid_t GetLastBlockedTid(const std::string &name) {
+  std::shared_ptr<FunctionInode> fino = get_channel(name);
   if (unlikely(!fino)) return 0;
   return fino->get_chan().get_last_blocked_tid();
 }
 
-void ChannelWorker(rt::TCPConn &c) {
+void ChannelWorker(rt::TCPConn &c, const std::string &name) {
   std::vector<std::byte> data;
-  std::shared_ptr<FunctionInode> fino = get_channel(0);
+  std::shared_ptr<FunctionInode> fino = get_channel(name);
   FunctionChannel &chan = fino->get_chan();
 
   while (true) {
