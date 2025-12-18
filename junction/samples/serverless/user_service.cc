@@ -37,6 +37,6 @@ std::string UserLogic(const std::string &method, const std::string &path,
 }  // namespace
 
 int main() {
-  // TODO call watchdog with user logic
+  // TODO: call watchdog with user logic
   return 0;
 }
