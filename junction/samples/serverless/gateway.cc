@@ -209,6 +209,7 @@ void HandleRequest() {
     std::thread(ProcessRequest, new_socket).detach();
   }
 }
+}  // namespace
 
 /**
  * @brief Call the gateway from a function when there is a function-to-function
@@ -253,7 +254,6 @@ std::string CallGateway(const std::string &req) {
   res[n] = '\0';
   return res;
 }
-}  // namespace
 
 int main() {
   if (!InitGateway()) { return 1; }
