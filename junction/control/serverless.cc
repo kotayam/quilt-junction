@@ -394,7 +394,9 @@ void RunRestored(std::shared_ptr<Process> proc, std::string_view name,
               << " flushed: " << samples[i][4] - samples[i][3];
   }
 #else
+  LOG(INFO) << "RunRestored: Sending restore signal: " << arg;
   chan.DoRequest(std::string{arg});
+  LOG(INFO) << "RunRestored: Restore signal acknowledged by app";
 #endif
 
   if (GetCfg().mem_trace()) {
@@ -475,7 +477,10 @@ void ChannelWorker(rt::TCPConn &c, std::string_view name) {
     if (unlikely(!ret)) break;
 
     std::string req(reinterpret_cast<const char *>(data.data()), nbytes);
+
+    LOG(INFO) << "ChannelWorker: calling DoRequest for: " << req;
     std::string res = chan.DoRequest(std::move(req));
+    LOG(INFO) << "ChannelWorker: DoRequest returned: " << res;
 
     nbytes = res.size();
     ret = WriteFull(c, std::as_bytes(std::span{&nbytes, 1}));
@@ -483,6 +488,8 @@ void ChannelWorker(rt::TCPConn &c, std::string_view name) {
 
     ret = WriteFull(c, std::as_bytes(std::span{res.data(), nbytes}));
     if (unlikely(!ret)) break;
+
+    LOG(INFO) << "ChannelWorker: Successfully flushed response to TCP socket";
   }
 }
 
