@@ -124,13 +124,16 @@ ssize_t ReadResponseFromFunc(char *buf) {
     std::cerr << "Failed to read response length\n";
     return -1;
   }
+  std::cout << std::unitbuf
+            << "[Gateway] Function server response length: " << len << "\n";
 
   if (len == 0) { return 0; }
   if (read(func_fd, buf, len) != len) {
     std::cerr << "Failed to read response data\n";
     return -1;
   }
-  std::cout << std::unitbuf << "[Gateway] Server Response: " << buf << "\n";
+  std::cout << std::unitbuf
+            << "[Gateway] Function server response data: " << buf << "\n";
   return len;
 }
 
