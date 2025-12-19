@@ -79,6 +79,7 @@ void WatchDog::Worker(const std::string &req) {
 }
 
 void WatchDog::ProcessRequest() {
+  std::cout << "[Watchdog] Waiting for request...\n";
   std::string req;
   while (std::getline(channel_, req)) {
     if (req == "restore") {
