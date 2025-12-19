@@ -298,7 +298,7 @@ Status<std::shared_ptr<File>> FunctionInode::Open(
 
 std::shared_ptr<FunctionInode> get_channel(std::string_view name) {
   rt::ScopedSharedLock g(lock_);
-  auto it = channels_.find(name);
+  auto it = channels_.find(std::string(name));
   if (it == channels_.end()) return {};
   return it->second;
 }
@@ -307,7 +307,7 @@ Status<void> SetupServerlessChannel(std::string_view name) {
   FSRoot &fs = FSRoot::GetGlobalRoot();
   rt::ScopedLock g(lock_);
 
-  if (channels_.count(name) > 0) return MakeError(EEXIST);
+  if (channels_.count(std::string(name)) > 0) return MakeError(EEXIST);
 
   Status<std::shared_ptr<Inode>> srvdir = LookupInode(fs, "/serverless");
   IDir *dir;
@@ -485,13 +485,13 @@ void ChannelWorker(rt::TCPConn &c, std::string_view name) {
   }
 }
 
-void ChannelServer(rt::TCPQueue &q) {
+void ChannelServer(rt::TCPQueue &q, std::string_view name) {
   while (true) {
     LOG(INFO) << "waiting for client connection...";
     Status<rt::TCPConn> c = q.Accept();
     if (!c) panic("couldn't accept a connection");
     LOG(INFO) << "client connected, spawning a channel worker";
-    rt::Spawn([c = std::move(*c)] mutable { ChannelWorker(c); });
+    rt::Spawn([c = std::move(*c)] mutable { ChannelWorker(c, name); });
   }
 }
 
