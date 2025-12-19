@@ -12,6 +12,7 @@
 constexpr int GATEWAY_PORT = 8080;
 constexpr int FUNCTION_PORT = 43;
 constexpr int REQ_BUF_SIZE = 4096;
+constexpr const char *FAIL_RES = "Failed";
 
 namespace {
 
@@ -170,17 +171,20 @@ void ProcessRequest(int client_fd) {
   }
 
   if (!ConnectToFunctionServer(buffer)) {
+    WriteResponseToClient(client_fd, FAIL_RES, strlen(FAIL_RES));
     close(client_fd);
     return;
   }
 
   if (!WriteRequestToFunc(buffer, req_len)) {
+    WriteResponseToClient(client_fd, FAIL_RES, strlen(FAIL_RES));
     close(func_fd);
     close(client_fd);
     return;
   }
   ssize_t res_len = ReadResponseFromFunc(buffer);
   if (res_len < 0) {
+    WriteResponseToClient(client_fd, FAIL_RES, strlen(FAIL_RES));
     close(func_fd);
     close(client_fd);
     return;

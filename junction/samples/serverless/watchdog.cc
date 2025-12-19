@@ -58,7 +58,7 @@ void WatchDog::Worker(const std::string &req) {
   std::string path;
   std::string body;
   if (!(ss >> method >> path)) {
-    std::cerr << "[Watchdog] Invalid request\n";
+    std::cerr << "[Watchdog] Invalid request: " << req << "\n";
     res = "Invalid request: " + req;
   } else {
     ss >> body;
