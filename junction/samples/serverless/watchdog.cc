@@ -79,9 +79,13 @@ void WatchDog::Worker(const std::string &req) {
 }
 
 void WatchDog::ProcessRequest() {
-  std::cout << "[Watchdog] Waiting for request...\n";
-  std::string req;
-  while (std::getline(channel_, req)) {
+  while (true) {
+    std::cout << "[Watchdog] Waiting for request...\n";
+    std::string req;
+    if (!std::getline(channel_, req)) {
+      std::cerr << "[Watchdog] Failed to read request\n";
+      continue;
+    }
     if (req == "restore") {
       std::cout
           << "[Watchdog] Resumed from snapshot. Ignoring restore signal.\n";
