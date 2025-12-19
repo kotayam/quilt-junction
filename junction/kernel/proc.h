@@ -882,7 +882,8 @@ class Process : public std::enable_shared_from_this<Process> {
     if (!cwd) throw std::runtime_error("stale cwd during snapshot");
     ar(*cwd);
 
-    ar(thread_map_.size(), GetLastBlockedTid(GetCfg().GetArg("function_name")));
+    std::string function_name = GetCfg().GetArg("function_name");
+    ar(thread_map_.size(), GetLastBlockedTid(function_name));
     for (const auto &[pid, th] : thread_map_) {
       ar(pid);
       th->DoSave(ar);
