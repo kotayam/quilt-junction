@@ -199,8 +199,8 @@ class FunctionChannel {
 
 class FunctionInode : public Inode {
  public:
-  FunctionInode(int id, ino_t inum = AllocateInodeNumber())
-      : Inode(kTypeFIFO | 0666, inum), id_(id) {}
+  FunctionInode(std::string name, ino_t inum = AllocateInodeNumber())
+      : Inode(kTypeFIFO | 0666, inum), name_(name) {}
 
   Status<std::shared_ptr<File>> Open(
       uint32_t flags, FileMode mode,
@@ -214,7 +214,7 @@ class FunctionInode : public Inode {
   template <class Archive>
   void save(Archive &ar) const {
     BUG_ON(chan_.in_progress());
-    ar(id_, get_inum());
+    ar(name_, get_inum());
     ar(cereal::base_class<Inode>(this));
     ar(chan_);
   }
@@ -222,14 +222,14 @@ class FunctionInode : public Inode {
   template <class Archive>
   static void load_and_construct(Archive &ar,
                                  cereal::construct<FunctionInode> &construct) {
-    int id;
+    std::string name;
     ino_t inum;
-    ar(id, inum);
-    construct(id, inum);
+    ar(name, inum);
+    construct(name, inum);
     ar(cereal::base_class<Inode>(construct.ptr()));
     ar(construct->chan_);
     rt::ScopedLock g(lock_);
-    channels_[id] =
+    channels_[name] =
         std::static_pointer_cast<FunctionInode>(construct->get_this());
   }
 
@@ -237,7 +237,7 @@ class FunctionInode : public Inode {
   [[nodiscard]] const FunctionChannel &get_chan() const { return chan_; }
 
  private:
-  int id_;
+  std::string name_;
   FunctionChannel chan_;
 };
 
