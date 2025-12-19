@@ -88,11 +88,15 @@ class FunctionChannel {
   Status<size_t> Write(std::span<const std::byte> buf) {
     BUG_ON(!buf.size());
     Time end = Time::Now();
+    LOG(INFO) << "FunctionChannel::Write: received " << buf.size()
+              << " bytes from app";
     if (unlikely(!timings().first_function_end))
       timings().first_function_end = end;
     rt::SpinGuard g(lock_);
     BUG_ON(!in_progress_);
     response_ = from_byte_span(buf);
+    LOG(INFO) << "FunctionChannel::Write: response_ set to '" << response_
+              << "'";
     junction_waiter_.Wake(true);
     if (!start_.IsZero()) {
       latencies_us_.push_back((end - start_).Microseconds());
