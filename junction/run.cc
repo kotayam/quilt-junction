@@ -179,9 +179,9 @@ void JunctionMain(int argc, char *argv[]) {
     if (!function_arg.empty()) {
       rt::SpawnHead([p = proc, arg = std::move(function_arg)] mutable {
         if (GetCfg().restoring())
-          RunRestored(std::move(p), 0, arg);
+          RunRestored(std::move(p), function_name, arg);
         else
-          WarmupAndSnapshot(std::move(p), 0, arg);
+          WarmupAndSnapshot(std::move(p), function_name, arg);
       });
     } else if (unlikely(GetCfg().snapshot_on_stop())) {
       rt::Spawn([p = proc] mutable {
