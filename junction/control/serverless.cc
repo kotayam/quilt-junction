@@ -296,14 +296,14 @@ Status<std::shared_ptr<File>> FunctionInode::Open(
   return std::make_shared<FunctionChannelFile>(flags, mode, std::move(dent));
 }
 
-std::shared_ptr<FunctionInode> get_channel(const std::string &name) {
+std::shared_ptr<FunctionInode> get_channel(std::string_view name) {
   rt::ScopedSharedLock g(lock_);
   auto it = channels_.find(name);
   if (it == channels_.end()) return {};
   return it->second;
 }
 
-Status<void> SetupServerlessChannel(const std::string &name) {
+Status<void> SetupServerlessChannel(std::string_view name) {
   FSRoot &fs = FSRoot::GetGlobalRoot();
   rt::ScopedLock g(lock_);
 
@@ -352,7 +352,7 @@ void PrintTimes(const std::vector<uint64_t> &times, std::string_view name) {
   LOG(ERR) << ss.str();
 }
 
-void RunRestored(std::shared_ptr<Process> proc, const std::string &name,
+void RunRestored(std::shared_ptr<Process> proc, std::string_view name,
                  std::string_view arg) {
   std::shared_ptr<FunctionInode> fino = get_channel(name);
   if (unlikely(!fino)) {
@@ -408,7 +408,7 @@ void RunRestored(std::shared_ptr<Process> proc, const std::string &name,
   syscall_exit(0);
 }
 
-void WarmupAndSnapshot(std::shared_ptr<Process> proc, const std::string &name,
+void WarmupAndSnapshot(std::shared_ptr<Process> proc, std::string_view name,
                        std::string_view arg) {
   std::shared_ptr<FunctionInode> fino = get_channel(name);
   if (unlikely(!fino)) {
@@ -442,19 +442,19 @@ void WarmupAndSnapshot(std::shared_ptr<Process> proc, const std::string &name,
   syscall_exit(0);
 }
 
-std::string InvokeChan(const std::string &name, std::string arg) {
+std::string InvokeChan(std::string_view name, std::string arg) {
   std::shared_ptr<FunctionInode> fino = get_channel(name);
   assert(fino);
   return fino->get_chan().DoRequest(arg);
 }
 
-pid_t GetLastBlockedTid(const std::string &name) {
+pid_t GetLastBlockedTid(std::string_view name) {
   std::shared_ptr<FunctionInode> fino = get_channel(name);
   if (unlikely(!fino)) return 0;
   return fino->get_chan().get_last_blocked_tid();
 }
 
-void ChannelWorker(rt::TCPConn &c, const std::string &name) {
+void ChannelWorker(rt::TCPConn &c, std::string_view name) {
   std::vector<std::byte> data;
   std::shared_ptr<FunctionInode> fino = get_channel(name);
   FunctionChannel &chan = fino->get_chan();
@@ -495,12 +495,12 @@ void ChannelServer(rt::TCPQueue &q) {
   }
 }
 
-Status<void> InitChannelClient() {
+Status<void> InitChannelClient(std::string_view name) {
   Status<rt::TCPQueue> q = rt::TCPQueue::Listen({0, kChannelPort}, 4096);
   if (!q) return MakeError(q);
   LOG(INFO) << "started channel client on port " << kChannelPort;
 
-  rt::Spawn([q = std::move(*q)] mutable { ChannelServer(q); });
+  rt::Spawn([q = std::move(*q)] mutable { ChannelServer(q, name); });
   return {};
 }
 
