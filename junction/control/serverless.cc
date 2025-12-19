@@ -492,7 +492,7 @@ void ChannelServer(rt::TCPQueue &q, std::string_view name) {
     if (!c) panic("couldn't accept a connection");
     LOG(INFO) << "client connected, spawning a channel worker";
     rt::Spawn([c = std::move(*c), name_str = std::string(name)] mutable {
-      ChannelWorker(c, name);
+      ChannelWorker(c, name_str);
     });
   }
 }
@@ -503,7 +503,7 @@ Status<void> InitChannelClient(std::string_view name) {
   LOG(INFO) << "started channel client on port " << kChannelPort;
 
   rt::Spawn([q = std::move(*q), name_str = std::string(name)] mutable {
-    ChannelServer(q, name);
+    ChannelServer(q, name_str);
   });
   return {};
 }
