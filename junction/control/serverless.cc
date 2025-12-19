@@ -502,7 +502,9 @@ Status<void> InitChannelClient(std::string_view name) {
   if (!q) return MakeError(q);
   LOG(INFO) << "started channel client on port " << kChannelPort;
 
-  rt::Spawn([q = std::move(*q)] mutable { ChannelServer(q, name); });
+  rt::Spawn([q = std::move(*q), name_str = std::string(name)] mutable {
+    ChannelServer(q, name);
+  });
   return {};
 }
 
