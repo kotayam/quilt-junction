@@ -491,7 +491,9 @@ void ChannelServer(rt::TCPQueue &q, std::string_view name) {
     Status<rt::TCPConn> c = q.Accept();
     if (!c) panic("couldn't accept a connection");
     LOG(INFO) << "client connected, spawning a channel worker";
-    rt::Spawn([c = std::move(*c)] mutable { ChannelWorker(c, name); });
+    rt::Spawn([c = std::move(*c), name_str = std::string(name)] mutable {
+      ChannelWorker(c, name);
+    });
   }
 }
 
