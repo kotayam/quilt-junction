@@ -318,7 +318,8 @@ Status<void> SetupServerlessChannel(std::string_view name) {
     dir = memfs::MkFolder(*fs.get_root().get(), "serverless").get();
   }
 
-  std::shared_ptr<FunctionInode> fino = std::make_shared<FunctionInode>(name);
+  std::shared_ptr<FunctionInode> fino =
+      std::make_shared<FunctionInode>(std::string(name));
   Status<void> ret = dir->Link(name, fino);
   if (!ret) return ret;
   channels_.emplace(name, std::move(fino));
