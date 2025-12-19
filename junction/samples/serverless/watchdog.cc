@@ -51,8 +51,12 @@ bool WatchDog::Warmup() {
 }
 
 void WatchDog::Respond(const std::string &res) {
+  std::cout << std::unitbuf
+            << "[Wathdog] Forwarding response to function server...\n";
   std::lock_guard<std::mutex> lock(chan_mutex_);
   channel_ << res;
+  std::cout << std::unitbuf
+            << "[Wathdog] Forwarded response to function server\n";
 }
 
 void WatchDog::Worker(const std::string &req) {
@@ -66,7 +70,10 @@ void WatchDog::Worker(const std::string &req) {
     res = "Invalid request: " + req;
   } else {
     ss >> body;
+    std::cout << std::unitbuf << "[Wathdog] Calling handler...\n";
     res = handler_(method, path, body);
+    std::cout << std::unitbuf
+              << "[Wathdog] Received response from handler: " << res << "\n";
   }
   Respond(res);
 }
@@ -80,6 +87,7 @@ void WatchDog::ProcessRequest() {
       Respond("OK");
       continue;
     }
+    std::cout << "[Watchdog] Spawning a worker for request: " << req << "\n";
     std::thread(&WatchDog::Worker, this, req).detach();
   }
 }
