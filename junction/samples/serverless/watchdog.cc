@@ -22,6 +22,10 @@ bool WatchDog::OpenChannel() {
     std::cerr << "[Watchdog] Failed to open serverless channel\n";
     return false;
   }
+
+  // avoid buffering
+  channel_ << std::unitbuf;
+
   std::cout << std::unitbuf
             << "[Watchdog] Function process started. Waiting for requests on "
             << chan_path_ << "\n";
