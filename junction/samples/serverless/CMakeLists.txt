@@ -58,14 +58,13 @@ file(WRITE ${caladan_gateway_config_path} ${caladan_gateway_config})
 add_executable(user_service 
     user_service.cc
     watchdog.cc
-    gateway.cc
 )
 
 # follower service
 add_executable(follower_service 
     follower_service.cc
     watchdog.cc
-    gateway.cc
+    gateway_client.cc
 )
 
 # client

@@ -3,7 +3,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "junction/samples/serverless/gateway.h"
+#include "junction/samples/serverless/gateway_client.h"
 #include "junction/samples/serverless/watchdog.h"
 
 namespace {
