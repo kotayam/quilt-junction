@@ -30,8 +30,10 @@ std::string FollowerLogic(const std::string &method, const std::string &path,
                           const std::string &body) {
   std::string res;
   if (method == "GET" && path.rfind("/followers/", 0) == 0) {
-    int user_id = std::stoi(path.substr(11));
-    res = GetFollowersHandler(user_id);
+    try {
+      int user_id = std::stoi(path.substr(11));
+      res = GetFollowersHandler(user_id);
+    } catch (...) { res = "Invalid user id"; }
   } else {
     res = "Invalid Request";
   }

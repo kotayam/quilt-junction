@@ -1,6 +1,7 @@
 #include "watchdog.h"
 
 #include <iostream>
+#include <mutex>
 #include <sstream>
 #include <string>
 #include <thread>
@@ -49,7 +50,10 @@ bool WatchDog::Warmup() {
   return true;
 }
 
-void WatchDog::Respond(const std::string &res) { channel_ << res; }
+void WatchDog::Respond(const std::string &res) {
+  std::lock_guard<std::mutex> lock(chan_mutex_);
+  channel_ << res;
+}
 
 void WatchDog::Worker(const std::string &req) {
   std::string res;
