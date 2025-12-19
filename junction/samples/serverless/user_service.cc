@@ -25,8 +25,10 @@ std::string UserLogic(const std::string &method, const std::string &path,
                       const std::string &body) {
   std::string res;
   if (method == "GET" && path.rfind("/user/", 0) == 0) {
-    int user_id = std::stoi(path.substr(6));
-    res = GetUserHandler(user_id);
+    try {
+      int user_id = std::stoi(path.substr(6));
+      res = GetUserHandler(user_id);
+    } catch (...) { res = "Invalid user id"; }
   } else if (method == "POST" && path == "/user") {
     res = AddUserHandler(body);
   } else {
