@@ -19,7 +19,6 @@ namespace {
 int gw_fd;
 sockaddr_in gw_addr;
 int addrlen;
-int func_fd;
 
 bool InitGateway() {
   gw_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -60,11 +59,11 @@ bool InitGateway() {
  *
  * @return
  */
-bool ConnectToFunctionServer(const char *buf) {
-  func_fd = socket(AF_INET, SOCK_STREAM, 0);
+int ConnectToFunctionServer(const char *buf) {
+  int func_fd = socket(AF_INET, SOCK_STREAM, 0);
   if (func_fd < 0) {
     std::cerr << "Failed to create socket for function server\n";
-    return false;
+    return -1;
   }
 
   // route to correct function server
@@ -75,7 +74,7 @@ bool ConnectToFunctionServer(const char *buf) {
     function_ip = "10.10.1.4";
   } else {
     std::cerr << "Invalid request to function server\n";
-    return false;
+    return -1;
   }
 
   sockaddr_in server_addr;
@@ -84,7 +83,7 @@ bool ConnectToFunctionServer(const char *buf) {
   if (inet_pton(AF_INET, function_ip.c_str(), &server_addr.sin_addr) <= 0) {
     std::cerr << "Failed to set function server IP address\n";
     close(func_fd);
-    return false;
+    return -1;
   }
 
   std::cout << std::unitbuf << "[Gateway] Connecting to " << function_ip << ":"
@@ -93,15 +92,15 @@ bool ConnectToFunctionServer(const char *buf) {
               sizeof(server_addr)) < 0) {
     std::cerr << "Failed to connect to function server\n";
     close(func_fd);
-    return false;
+    return -1;
   }
 
   std::cout << std::unitbuf << "[Gateway] Connected to " << function_ip << ":"
             << FUNCTION_PORT << "\n";
-  return true;
+  return func_fd;
 }
 
-bool WriteRequestToFunc(const char *buf, ssize_t req_len) {
+bool WriteRequestToFunc(int func_fd, const char *buf, ssize_t req_len) {
   if (write(func_fd, &req_len, sizeof(req_len)) != sizeof(req_len)) {
     std::cerr << "Failed to write length header\n";
     return false;
@@ -116,7 +115,7 @@ bool WriteRequestToFunc(const char *buf, ssize_t req_len) {
   return true;
 }
 
-ssize_t ReadResponseFromFunc(char *buf) {
+ssize_t ReadResponseFromFunc(int func_fd, char *buf) {
   std::cout << std::unitbuf
             << "[Gateway] Waiting for response from function server...\n";
   ssize_t len = 0;
@@ -174,19 +173,20 @@ void ProcessRequest(int client_fd) {
     return;
   }
 
-  if (!ConnectToFunctionServer(buffer)) {
+  int func_fd = ConnectToFunctionServer(buffer);
+  if (func_fd < 0) {
     WriteResponseToClient(client_fd, FAIL_RES, strlen(FAIL_RES));
     close(client_fd);
     return;
   }
 
-  if (!WriteRequestToFunc(buffer, req_len)) {
+  if (!WriteRequestToFunc(func_fd, buffer, req_len)) {
     WriteResponseToClient(client_fd, FAIL_RES, strlen(FAIL_RES));
     close(func_fd);
     close(client_fd);
     return;
   }
-  ssize_t res_len = ReadResponseFromFunc(buffer);
+  ssize_t res_len = ReadResponseFromFunc(func_fd, buffer);
   if (res_len < 0) {
     WriteResponseToClient(client_fd, FAIL_RES, strlen(FAIL_RES));
     close(func_fd);
@@ -202,14 +202,16 @@ void ProcessRequest(int client_fd) {
 
 void HandleRequest() {
   while (true) {
+    std::cout << std::unitbuf << "[Gateway] Waiting for connection...\n";
     int new_socket = accept(gw_fd, reinterpret_cast<sockaddr *>(&gw_addr),
                             reinterpret_cast<socklen_t *>(&addrlen));
     if (new_socket < 0) {
       std::cerr << "Failed to accept new socket\n";
       continue;
     }
-
-    // TODO: mutex for fd
+    std::cout << std::unitbuf
+              << "[Gateway] Spawning a new worker for client: " << new_socket
+              << "\n";
     std::thread(ProcessRequest, new_socket).detach();
   }
 }

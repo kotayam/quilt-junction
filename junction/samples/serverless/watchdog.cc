@@ -89,7 +89,7 @@ void WatchDog::ProcessRequest() {
     if (req == "restore") {
       std::cout
           << "[Watchdog] Resumed from snapshot. Ignoring restore signal.\n";
-      Respond("OK");
+      Respond(OK);
       continue;
     }
     std::cout << "[Watchdog] Spawning a worker for request: " << req << "\n";
