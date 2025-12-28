@@ -2,7 +2,7 @@
 
 A simple implementation of a mock FaaS.
 
-## Unix Socket
+## HTTP
 
 ## Serverless Channel
 
