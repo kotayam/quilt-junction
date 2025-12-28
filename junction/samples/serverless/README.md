@@ -21,7 +21,7 @@ cd ./build/junction
 ```
 
 ```bash
-./junction_run ./samples/serverless/channel/caladan_gateway.config --function_name gateway --keep_alive -- ./samples/serverless/channel/gateway
+./junction_run ./samples/serverless/channel/caladan_gateway.config --function_name gateway --keep_alive -- ./samples/serverless/channel/gateway_chan
 ```
 
 ### Functions
@@ -41,13 +41,13 @@ These steps will warmup the function:
 #### Warmup user_service
 
 ```bash
-./junction_run ./samples/serverless/channel/caladan_user_service.config --function_name user --function_arg warmup_data --snapshot-prefix user -- ./samples/serverless/channel/user_service
+./junction_run ./samples/serverless/channel/caladan_user_service.config --function_name user --function_arg warmup_data --snapshot-prefix user -- ./samples/serverless/channel/user_service_chan
 ```
 
 #### Warmup follower_service
 
 ```bash
-./junction_run ./samples/serverless/channel/caladan_follower_service.config --function_name follower --function_arg warmup_data --snapshot-prefix follower -- ./samples/serverless/channel/follower_service
+./junction_run ./samples/serverless/channel/caladan_follower_service.config --function_name follower --function_arg warmup_data --snapshot-prefix follower -- ./samples/serverless/channel/follower_service_chan
 ```
 
 After the warmup completes, run in restored mode to continue from the main function. We will set the `keep_alive` flag to keep the channel alive to listen for client requests.
@@ -90,5 +90,5 @@ Open a new terminal and send request directly to the serverless channel.
 
 ```bash
 cd ./build/junction
-./junction_run ./samples/serverless/channel/caladan_client.config -- ./samples/serverless/channel/client "GET /user/0"
+./junction_run ./samples/serverless/channel/caladan_client.config -- ./samples/serverless/channel/client_chan "GET /user/0"
 ```
