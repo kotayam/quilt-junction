@@ -53,20 +53,20 @@ set(caladan_gateway_config_path
 file(WRITE ${caladan_gateway_config_path} ${caladan_gateway_config})
 
 # user service
-add_executable(user_service 
+add_executable(user_service_chan 
     user_service.cc
     watchdog.cc
 )
 
 # follower service
-add_executable(follower_service 
+add_executable(follower_service_chan 
     follower_service.cc
     watchdog.cc
     gateway_client.cc
 )
 
 # client
-add_executable(client client.cc)
+add_executable(client_chan client.cc)
 
 # gateway
-add_executable(gateway gateway.cc)
+add_executable(gateway_chan gateway.cc)
