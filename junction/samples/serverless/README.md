@@ -19,7 +19,7 @@ cd ./build/junction
 ```
 
 ```bash
-./junction_run ./samples/serverless/caladan_gateway.config --function_name gateway --keep_alive -- ./samples/serverless/gateway
+./junction_run ./samples/serverless/channel/caladan_gateway.config --function_name gateway --keep_alive -- ./samples/serverless/channel/gateway
 ```
 
 ### Functions

@@ -1,5 +1,3 @@
-message(STATUS "Building junction sample: serverless")
-
 # Generate test configurations
 set(caladan_config_common
 "host_netmask 255.255.255.0
