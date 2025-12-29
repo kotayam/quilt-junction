@@ -36,7 +36,7 @@ set(caladan_controller_config_path
 )
 file(WRITE ${caladan_controller_config_path} ${caladan_controller_config})
 
-add_executable(gateway 
+add_executable(controller 
     controller.cc
     lib/httplib.h
 )
