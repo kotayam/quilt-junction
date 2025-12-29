@@ -20,4 +20,7 @@ set(caladan_gateway_config_path
 )
 file(WRITE ${caladan_gateway_config_path} ${caladan_gateway_config})
 
-add_executable(gateway gateway.cc)
+add_executable(gateway 
+    gateway.cc
+    lib/httplib.h
+)
