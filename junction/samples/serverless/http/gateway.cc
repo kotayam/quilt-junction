@@ -61,7 +61,7 @@ void ProxyHandler(const httplib::Request &req, httplib::Response &res) {
     res.status = ctrl_res->status;
     res.body = ctrl_res->body;
     for (const auto &header : ctrl_res->headers) {
-      if (header.first != "Content-Type" &&
+      if (header.first != "Content-Length" &&
           header.first != "Transfer-Encoding") {
         res.set_header(header.first, header.second);
       }
