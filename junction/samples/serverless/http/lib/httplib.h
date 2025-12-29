@@ -2271,9 +2271,9 @@ inline size_t Response::get_header_value_u64(const std::string &key, size_t def,
 
 namespace detail {
 
-inline bool set_socket_opt_impl(socket_t sock, int level, int optname,
-                                const void *optval, socklen_t optlen) {
-    return true;
+// inline bool set_socket_opt_impl(socket_t sock, int level, int optname,
+//                                 const void *optval, socklen_t optlen) {
+//     return true;
 //   return setsockopt(sock, level, optname,
 // #ifdef _WIN32
 //                     reinterpret_cast<const char *>(optval),
@@ -2281,36 +2281,36 @@ inline bool set_socket_opt_impl(socket_t sock, int level, int optname,
 //                     optval,
 // #endif
 //                     optlen) == 0;
-}
+// }
 
-inline bool set_socket_opt(socket_t sock, int level, int optname, int optval) {
-  return set_socket_opt_impl(sock, level, optname, &optval, sizeof(optval));
-}
+// inline bool set_socket_opt(socket_t sock, int level, int optname, int optval) {
+//   return set_socket_opt_impl(sock, level, optname, &optval, sizeof(optval));
+// }
 
-inline bool set_socket_opt_time(socket_t sock, int level, int optname,
-                                time_t sec, time_t usec) {
-#ifdef _WIN32
-  auto timeout = static_cast<uint32_t>(sec * 1000 + usec / 1000);
-#else
-  timeval timeout;
-  timeout.tv_sec = static_cast<long>(sec);
-  timeout.tv_usec = static_cast<decltype(timeout.tv_usec)>(usec);
-#endif
-  return set_socket_opt_impl(sock, level, optname, &timeout, sizeof(timeout));
-}
+// inline bool set_socket_opt_time(socket_t sock, int level, int optname,
+//                                 time_t sec, time_t usec) {
+// #ifdef _WIN32
+//   auto timeout = static_cast<uint32_t>(sec * 1000 + usec / 1000);
+// #else
+//   timeval timeout;
+//   timeout.tv_sec = static_cast<long>(sec);
+//   timeout.tv_usec = static_cast<decltype(timeout.tv_usec)>(usec);
+// #endif
+//   return set_socket_opt_impl(sock, level, optname, &timeout, sizeof(timeout));
+// }
 
 } // namespace detail
 
-inline void default_socket_options(socket_t sock) {
-  detail::set_socket_opt(sock, SOL_SOCKET,
-#ifdef SO_REUSEPORT
-                         SO_REUSEPORT,
-#else
-                         SO_REUSEADDR,
-#endif
-                         1);
-}
-
+// inline void default_socket_options(socket_t sock) {
+//   detail::set_socket_opt(sock, SOL_SOCKET,
+// #ifdef SO_REUSEPORT
+//                          SO_REUSEPORT,
+// #else
+//                          SO_REUSEADDR,
+// #endif
+//                          1);
+// }
+//
 inline std::string get_bearer_token_auth(const Request &req) {
   if (req.has_header("Authorization")) {
     constexpr auto bearer_header_prefix_len = detail::str_len("Bearer ");
@@ -4945,12 +4945,12 @@ socket_t create_socket(const std::string &host, const std::string &ip, int port,
     }
 #endif
 
-    if (tcp_nodelay) { set_socket_opt(sock, IPPROTO_TCP, TCP_NODELAY, 1); }
-
-    if (rp->ai_family == AF_INET6) {
-      set_socket_opt(sock, IPPROTO_IPV6, IPV6_V6ONLY, ipv6_v6only ? 1 : 0);
-    }
-
+    // if (tcp_nodelay) { set_socket_opt(sock, IPPROTO_TCP, TCP_NODELAY, 1); }
+    //
+    // if (rp->ai_family == AF_INET6) {
+    //   set_socket_opt(sock, IPPROTO_IPV6, IPV6_V6ONLY, ipv6_v6only ? 1 : 0);
+    // }
+    //
     if (socket_options) { socket_options(sock); }
 
     // bind or connect
@@ -5094,10 +5094,10 @@ inline socket_t create_client_socket(
         }
 
         set_nonblocking(sock2, false);
-        set_socket_opt_time(sock2, SOL_SOCKET, SO_RCVTIMEO, read_timeout_sec,
-                            read_timeout_usec);
-        set_socket_opt_time(sock2, SOL_SOCKET, SO_SNDTIMEO, write_timeout_sec,
-                            write_timeout_usec);
+        // set_socket_opt_time(sock2, SOL_SOCKET, SO_RCVTIMEO, read_timeout_sec,
+        //                     read_timeout_usec);
+        // set_socket_opt_time(sock2, SOL_SOCKET, SO_SNDTIMEO, write_timeout_sec,
+        //                     write_timeout_usec);
 
         error = Error::Success;
         return true;
@@ -9340,10 +9340,10 @@ inline bool Server::listen_internal() {
         break;
       }
 
-      detail::set_socket_opt_time(sock, SOL_SOCKET, SO_RCVTIMEO,
-                                  read_timeout_sec_, read_timeout_usec_);
-      detail::set_socket_opt_time(sock, SOL_SOCKET, SO_SNDTIMEO,
-                                  write_timeout_sec_, write_timeout_usec_);
+      // detail::set_socket_opt_time(sock, SOL_SOCKET, SO_RCVTIMEO,
+      //                             read_timeout_sec_, read_timeout_usec_);
+      // detail::set_socket_opt_time(sock, SOL_SOCKET, SO_SNDTIMEO,
+      //                             write_timeout_sec_, write_timeout_usec_);
 
       if (!task_queue->enqueue(
               [this, sock]() { process_and_close_socket(sock); })) {
@@ -10816,7 +10816,7 @@ inline void ClientImpl::setup_redirect_client(ClientType &client) {
   client.set_address_family(address_family_);
   client.set_tcp_nodelay(tcp_nodelay_);
   client.set_ipv6_v6only(ipv6_v6only_);
-  if (socket_options_) { client.set_socket_options(socket_options_); }
+  // if (socket_options_) { client.set_socket_options(socket_options_); }
   if (!interface_.empty()) { client.set_interface(interface_); }
 
   // Copy logging and headers
