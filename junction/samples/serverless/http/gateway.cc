@@ -42,7 +42,7 @@ void ProxyHandler(const httplib::Request &req, httplib::Response &res) {
             << req.path << std::endl;
 
   httplib::Client cli(CONTROLLER_IP, CONTROLLER_PORT);
-  cli.set_connection_timeout(0, TIMEOUT_US);
+  // cli.set_connection_timeout(0, TIMEOUT_US);
 
   httplib::Result ctrl_res;
   if (req.method == "GET") {
@@ -82,13 +82,12 @@ int main() {
   svr.Put(".*", ProxyHandler);
   svr.Delete(".*", ProxyHandler);
 
+  std::cout << "[Gateway] Listening on " << GATEWAY_IP << ":" << GATEWAY_PORT
+            << std::endl;
   if (!svr.listen(GATEWAY_IP, GATEWAY_PORT)) {
     std::cerr << "[Gateway] Server failed to listen" << std::endl;
     exit(1);
   }
-
-  std::cout << "[Gateway] Listening on " << GATEWAY_IP << ":" << GATEWAY_PORT
-            << std::endl;
 
   return 0;
 }
