@@ -9288,7 +9288,9 @@ inline int Server::bind_internal(const std::string &host, int port,
 }
 
 inline bool Server::listen_internal() {
+    std::cerr << "listen_internal called" << std::endl;
   if (is_decommissioned) { return false; }
+    std::cerr << "listen_internal decoommissioned" << std::endl;
 
   auto ret = true;
   is_running_ = true;
@@ -9316,6 +9318,7 @@ inline bool Server::listen_internal() {
       // OVERLAPPED
       socket_t sock = WSAAccept(svr_sock_, nullptr, nullptr, nullptr, 0);
 #elif defined SOCK_CLOEXEC
+    std::cerr << "listen_internal accepting for connection..." << std::endl;
       socket_t sock = accept4(svr_sock_, nullptr, nullptr, SOCK_CLOEXEC);
 #else
       socket_t sock = accept(svr_sock_, nullptr, nullptr);
