@@ -9288,21 +9288,16 @@ inline int Server::bind_internal(const std::string &host, int port,
 }
 
 inline bool Server::listen_internal() {
-    std::cerr << "listen_internal called" << std::endl;
   if (is_decommissioned) { return false; }
-    std::cerr << "listen_internal not decoommissioned" << std::endl;
 
   auto ret = true;
   is_running_ = true;
   auto se = detail::scope_exit([&]() { is_running_ = false; });
-    std::cerr << "listen_internal scope_exit called" << std::endl;
 
   {
     std::unique_ptr<TaskQueue> task_queue(new_task_queue());
-    std::cerr << "listen_internal task_queue" << std::endl;
 
     while (svr_sock_ != INVALID_SOCKET) {
-    std::cerr << "listen_internal while loop" << std::endl;
 #ifndef _WIN32
       if (idle_interval_sec_ > 0 || idle_interval_usec_ > 0) {
 #endif
@@ -9321,7 +9316,6 @@ inline bool Server::listen_internal() {
       // OVERLAPPED
       socket_t sock = WSAAccept(svr_sock_, nullptr, nullptr, nullptr, 0);
 #elif defined SOCK_CLOEXEC
-    std::cerr << "listen_internal accepting for connection..." << std::endl;
       socket_t sock = accept4(svr_sock_, nullptr, nullptr, SOCK_CLOEXEC);
 #else
       socket_t sock = accept(svr_sock_, nullptr, nullptr);
