@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include "lib/httplib.h"
 
 constexpr int CONTROLLER_PORT = 43;
@@ -9,14 +11,18 @@ void GetUserHandler(const httplib::Request &req, httplib::Response &res) {
   res.set_content("Test", "text/plain");
 }
 
-void InitServer() {
+bool InitServer() {
   httplib::Server svr;
   svr.Get("/user", GetUserHandler);
-  svr.listen("0.0.0.0", CONTROLLER_PORT);
+  return svr.listen("0.0.0.0", CONTROLLER_PORT);
 }
 }  // namespace
 
 int main() {
-  InitServer();
+  if (!InitServer()) {
+    std::cerr << "[Controller] Failed to listen on port: " << CONTROLLER_PORT
+              << std::endl;
+    exit(1);
+  }
   return 0;
 }
