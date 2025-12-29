@@ -82,9 +82,13 @@ int main() {
   svr.Put(".*", ProxyHandler);
   svr.Delete(".*", ProxyHandler);
 
+  if (!svr.listen(GATEWAY_IP, GATEWAY_PORT)) {
+    std::cerr << "[Gateway] Server failed to listen" << std::endl;
+    exit(1);
+  }
+
   std::cout << "[Gateway] Listening on " << GATEWAY_IP << ":" << GATEWAY_PORT
             << std::endl;
-  svr.listen(GATEWAY_IP, GATEWAY_PORT);
 
   return 0;
 }
