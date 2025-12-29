@@ -13,7 +13,7 @@ cd ./build/junction
 ```
 
 ```bash
-./junction_run ./samples/serverless/http/cladan_gateway.config -- ./samples/serverless/http/gateway
+./junction_run ./samples/serverless/http/caladan_gateway.config -- ./samples/serverless/http/gateway
 ```
 
 ## Serverless Channel
