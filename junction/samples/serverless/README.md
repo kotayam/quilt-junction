@@ -1,8 +1,20 @@
 # Serverless
 
-A simple implementation of a mock FaaS.
+A simple implementation of a mock FaaS. There are two implementations, one using HTTP and unix domain sockets, the other using the serverless channel implementation. The former is more representative of a standard serverless architecture.
 
 ## HTTP
+
+### Gateway
+
+This will run the gateway.
+
+```bash
+cd ./build/junction
+```
+
+```bash
+./junction_run ./samples/serverless/http/cladan_gateway.config -- ./samples/serverless/http/gateway
+```
 
 ## Serverless Channel
 
