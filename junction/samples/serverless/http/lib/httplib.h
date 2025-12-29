@@ -8654,11 +8654,11 @@ inline Server &Server::set_ipv6_v6only(bool on) {
   return *this;
 }
 
-inline Server &Server::set_socket_options(SocketOptions socket_options) {
-  socket_options_ = std::move(socket_options);
-  return *this;
-}
-
+// inline Server &Server::set_socket_options(SocketOptions socket_options) {
+//   socket_options_ = std::move(socket_options);
+//   return *this;
+// }
+//
 inline Server &Server::set_default_headers(Headers headers) {
   default_headers_ = std::move(headers);
   return *this;
@@ -9263,9 +9263,9 @@ inline int Server::bind_internal(const std::string &host, int port,
 
   if (!is_valid()) { return -1; }
 
-  svr_sock_ = create_server_socket(host, port, socket_flags, socket_options_);
-  if (svr_sock_ == INVALID_SOCKET) { return -1; }
-
+  // svr_sock_ = create_server_socket(host, port, socket_flags, socket_options_);
+  // if (svr_sock_ == INVALID_SOCKET) { return -1; }
+  //
   if (port == 0) {
     struct sockaddr_storage addr;
     socklen_t addr_len = sizeof(addr);
