@@ -16,6 +16,30 @@ cd ./build/junction
 ./junction_run ./samples/serverless/http/caladan_gateway.config -- ./samples/serverless/http/gateway
 ```
 
+### Controller
+
+This will run the controller.
+
+```bash
+cd ./build/junction
+```
+
+```bash
+./junction_run ./samples/serverless/http/caladan_controller.config -- ./samples/serverless/http/controller
+```
+
+### Client
+
+This will run the client.
+
+```bash
+cd ./junction/samples/serverless/http
+```
+
+```bash
+python client.py 10.10.1.1 8080
+```
+
 ## Serverless Channel
 
 ### Prepare
