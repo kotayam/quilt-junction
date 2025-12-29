@@ -2,7 +2,7 @@
 
 #include "lib/httplib.h"
 
-constexpr int CONTROLLER_PORT = 43;
+constexpr int CONTROLLER_PORT = 8080;
 
 namespace {
 
