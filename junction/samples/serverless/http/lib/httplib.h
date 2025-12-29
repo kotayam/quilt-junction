@@ -1330,7 +1330,7 @@ private:
   int address_family_ = AF_UNSPEC;
   bool tcp_nodelay_ = CPPHTTPLIB_TCP_NODELAY;
   bool ipv6_v6only_ = CPPHTTPLIB_IPV6_V6ONLY;
-  // SocketOptions socket_options_ = default_socket_options;
+  SocketOptions socket_options_ = default_socket_options;
 
   Headers default_headers_;
   std::function<ssize_t(Stream &, Headers &)> header_writer_ =
@@ -2301,7 +2301,7 @@ namespace detail {
 
 } // namespace detail
 
-// inline void default_socket_options(socket_t sock) {
+inline void default_socket_options(socket_t sock) {
 //   detail::set_socket_opt(sock, SOL_SOCKET,
 // #ifdef SO_REUSEPORT
 //                          SO_REUSEPORT,
@@ -2309,8 +2309,8 @@ namespace detail {
 //                          SO_REUSEADDR,
 // #endif
 //                          1);
-// }
-//
+}
+
 inline std::string get_bearer_token_auth(const Request &req) {
   if (req.has_header("Authorization")) {
     constexpr auto bearer_header_prefix_len = detail::str_len("Bearer ");
@@ -9263,9 +9263,9 @@ inline int Server::bind_internal(const std::string &host, int port,
 
   if (!is_valid()) { return -1; }
 
-  // svr_sock_ = create_server_socket(host, port, socket_flags, socket_options_);
-  // if (svr_sock_ == INVALID_SOCKET) { return -1; }
-  //
+  svr_sock_ = create_server_socket(host, port, socket_flags, socket_options_);
+  if (svr_sock_ == INVALID_SOCKET) { return -1; }
+
   if (port == 0) {
     struct sockaddr_storage addr;
     socklen_t addr_len = sizeof(addr);
