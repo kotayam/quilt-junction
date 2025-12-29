@@ -24,3 +24,19 @@ add_executable(gateway
     gateway.cc
     lib/httplib.h
 )
+
+# controller
+set(caladan_controller_config
+"host_addr 10.10.1.2
+${caladan_config_common}"
+)
+
+set(caladan_controller_config_path
+    ${CMAKE_CURRENT_BINARY_DIR}/caladan_controller.config
+)
+file(WRITE ${caladan_controller_config_path} ${caladan_controller_config})
+
+add_executable(gateway 
+    controller.cc
+    lib/httplib.h
+)
