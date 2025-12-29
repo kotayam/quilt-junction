@@ -1330,7 +1330,7 @@ private:
   int address_family_ = AF_UNSPEC;
   bool tcp_nodelay_ = CPPHTTPLIB_TCP_NODELAY;
   bool ipv6_v6only_ = CPPHTTPLIB_IPV6_V6ONLY;
-  SocketOptions socket_options_ = default_socket_options;
+  // SocketOptions socket_options_ = default_socket_options;
 
   Headers default_headers_;
   std::function<ssize_t(Stream &, Headers &)> header_writer_ =
