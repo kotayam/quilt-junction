@@ -4,7 +4,6 @@
 
 #include "lib/httplib.h"
 
-constexpr const char *GATEWAY_IP = "0.0.0.0";
 constexpr int GATEWAY_PORT = 8080;
 constexpr const char *CONTROLLER_IP = "10.10.1.2";
 constexpr int CONTROLLER_PORT = 8080;
@@ -82,9 +81,9 @@ int main() {
   svr.Put(".*", ProxyHandler);
   svr.Delete(".*", ProxyHandler);
 
-  std::cout << "[Gateway] Listening on " << GATEWAY_IP << ":" << GATEWAY_PORT
+  std::cout << "[Gateway] Listening on " << "0.0.0.0" << ":" << GATEWAY_PORT
             << std::endl;
-  if (!svr.listen(GATEWAY_IP, GATEWAY_PORT)) {
+  if (!svr.listen("0.0.0.0", GATEWAY_PORT)) {
     std::cerr << "[Gateway] Server failed to listen" << std::endl;
     exit(1);
   }

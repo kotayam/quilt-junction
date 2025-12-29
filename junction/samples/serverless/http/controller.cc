@@ -13,7 +13,12 @@ void GetUserHandler(const httplib::Request &req, httplib::Response &res) {
 
 bool InitServer() {
   httplib::Server svr;
+
   svr.Get("/user", GetUserHandler);
+
+  std::cout << "[Controller] Listening on " << "0.0.0.0" << ":"
+            << CONTROLLER_PORT << std::endl;
+
   return svr.listen("0.0.0.0", CONTROLLER_PORT);
 }
 }  // namespace
