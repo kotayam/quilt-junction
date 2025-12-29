@@ -4,7 +4,7 @@
 
 #include "lib/httplib.h"
 
-constexpr const char *GATEWAY_IP = "0.0.0.";
+constexpr const char *GATEWAY_IP = "0.0.0.0";
 constexpr int GATEWAY_PORT = 8080;
 constexpr const char *CONTROLLER_IP = "10.10.1.2";
 constexpr int CONTROLLER_PORT = 43;
