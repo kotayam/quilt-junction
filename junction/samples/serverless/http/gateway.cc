@@ -9,6 +9,8 @@ constexpr int GATEWAY_PORT = 8080;
 constexpr const char *CONTROLLER_IP = "10.10.1.2";
 constexpr int CONTROLLER_PORT = 43;
 
+constexpr int TIMEOUT_US = 300000;
+
 struct RequestRoute {
   std::string method;
   std::string path_prefix;
@@ -38,6 +40,36 @@ void ProxyHandler(const httplib::Request &req, httplib::Response &res) {
 
   std::cout << std::unitbuf << "[Gateway] Forwarding " << req.method << " "
             << req.path << std::endl;
+
+  httplib::Client cli(CONTROLLER_IP, CONTROLLER_PORT);
+  cli.set_connection_timeout(0, TIMEOUT_US);
+
+  httplib::Result ctrl_res;
+  if (req.method == "GET") {
+    ctrl_res = cli.Get(req.path, req.headers);
+  } else if (req.method == "POST") {
+    ctrl_res = cli.Post(req.path, req.headers, req.body,
+                        req.get_header_value("Content-Type"));
+  } else if (req.method == "PUT") {
+    ctrl_res = cli.Put(req.path, req.headers, req.body,
+                       req.get_header_value("Content-Type"));
+  } else if (req.method == "DELETE") {
+    ctrl_res = cli.Delete(req.path, req.headers);
+  }
+
+  if (ctrl_res) {
+    res.status = ctrl_res->status;
+    res.body = ctrl_res->body;
+    for (const auto &header : ctrl_res->headers) {
+      if (header.first != "Content-Type" &&
+          header.first != "Transfer-Encoding") {
+        res.set_header(header.first, header.second);
+      }
+    }
+  } else {
+    res.status = httplib::StatusCode::BadGateway_502;
+    res.set_content("Bad Gateway: Controller Unreachable", "text/plain");
+  }
 }
 
 }  // namespace
