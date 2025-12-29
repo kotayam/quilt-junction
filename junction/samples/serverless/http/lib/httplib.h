@@ -1011,7 +1011,7 @@ using ErrorLogger = std::function<void(const Error &, const Request *)>;
 
 using SocketOptions = std::function<void(socket_t sock)>;
 
-void default_socket_options(socket_t sock);
+// void default_socket_options(socket_t sock);
 
 const char *status_message(int status);
 
