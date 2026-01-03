@@ -19,10 +19,10 @@ void GetFollowersHandler(const httplib::Request &req, httplib::Response &res) {
   try {
     int user_id = std::stoi(req.path_params.at("id"));
     const std::vector<int> &followers = followers_db.at(user_id);
-    std::string req = "GET /user/";
+    std::string req_path = "/user/";
     std::vector<std::string> names;
     for (const int &id : followers) {
-      names.push_back(CallGateway(req + std::to_string(id)));
+      names.push_back(CallGateway(req_path + std::to_string(id)));
     }
     res.set_content(boost::algorithm::join(names, ", "), "text/plain");
   } catch (...) {
