@@ -25,7 +25,7 @@ bool SpawnService(const char *bin) {
               << std::endl;
     return true;
   }
-  std::cerr << "[Controller] Failed to spawn service." << std::endl;
+  std::cerr << "[Controller] Failed to spawn service: " << bin << std::endl;
   return false;
 }
 
