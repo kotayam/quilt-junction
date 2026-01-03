@@ -1,6 +1,13 @@
+#include <spawn.h>
+
 #include <iostream>
 
 #include "lib/httplib.h"
+
+extern char **environ;
+
+constexpr const char *USER_BIN = "./user_service";
+constexpr const char *FOLLOWER_BIN = "./follower_service";
 
 constexpr int CONTROLLER_PORT = 8080;
 
@@ -9,6 +16,18 @@ const std::string USER_SOCK = "user.sock";
 const std::string FOLLOWER_SOCK = "follower.sock";
 
 namespace {
+
+bool SpawnService(const char *bin) {
+  char *args[] = {const_cast<char *>(bin)};
+  pid_t pid;
+  if (posix_spawn(&pid, bin, nullptr, nullptr, args, environ) == 0) {
+    std::cout << "[Controller] Service spawned successfuly. PID: " << pid
+              << std::endl;
+    return true;
+  }
+  std::cerr << "[Controller] Failed to spawn service." << std::endl;
+  return false;
+}
 
 httplib::Server::Handler SocketHandler(std::string_view sock_path) {
   return [sock_path](const httplib::Request &req, httplib::Response &res) {
@@ -45,6 +64,9 @@ bool InitServer() {
 }  // namespace
 
 int main() {
+  if (!SpawnService(USER_BIN)) { exit(1); }
+  if (!SpawnService(FOLLOWER_BIN)) { exit(1); }
+
   if (!InitServer()) {
     std::cerr << "[Controller] Failed to listen on port: " << CONTROLLER_PORT
               << std::endl;
