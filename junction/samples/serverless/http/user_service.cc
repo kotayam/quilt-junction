@@ -23,7 +23,7 @@ void GetUserHandler(const httplib::Request &req, httplib::Response &res) {
 }  // namespace
 
 int main() {
-  WatchDog w("user", GetUserHandler);
+  WatchDog w("user", "/user/:id", GetUserHandler);
   w.Run();
   return 0;
 }

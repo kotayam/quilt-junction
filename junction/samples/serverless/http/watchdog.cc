@@ -11,9 +11,11 @@
 constexpr const char *SOCK_DIR = "/tmp/serverless/";
 constexpr const char *SOCK_EXT = ".sock";
 
-WatchDog::WatchDog(const std::string &name, httplib::Server::Handler h)
+WatchDog::WatchDog(const std::string &name, const std::string &req_path,
+                   httplib::Server::Handler h)
     : handler_(std::move(h)) {
   sock_path_ = SOCK_DIR + name + SOCK_EXT;
+  req_path_ = req_path;
 }
 
 bool WatchDog::InitServer() {
@@ -28,7 +30,7 @@ bool WatchDog::InitServer() {
   unlink(sock_path_.c_str());
 
   httplib::Server svr;
-  svr.Get(".*", handler_);
+  svr.Get(req_path_, handler_);
 
   if (!svr.set_address_family(AF_UNIX).listen(sock_path_, 80)) {
     std::cerr << "[Watchdog] Failed to listen on " << sock_path_ << std::endl;

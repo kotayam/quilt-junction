@@ -33,7 +33,7 @@ void GetFollowersHandler(const httplib::Request &req, httplib::Response &res) {
 }  // namespace
 
 int main() {
-  WatchDog w("follower", GetFollowersHandler);
+  WatchDog w("follower", "/followers/:id", GetFollowersHandler);
   w.Run();
   return 0;
 }
