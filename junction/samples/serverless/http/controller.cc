@@ -6,8 +6,9 @@
 
 extern char **environ;
 
-constexpr const char *USER_BIN = "./user_service";
-constexpr const char *FOLLOWER_BIN = "./follower_service";
+const std::string CURR_DIR = "./samples/serverless/http/";
+const std::string USER_BIN = "user_service";
+const std::string FOLLOWER_BIN = "follower_service";
 
 constexpr int CONTROLLER_PORT = 8080;
 
@@ -17,10 +18,10 @@ const std::string FOLLOWER_SOCK = "follower.sock";
 
 namespace {
 
-bool SpawnService(const char *bin) {
-  char *args[] = {const_cast<char *>(bin)};
+bool SpawnService(const std::string &bin) {
+  char *args[] = {const_cast<char *>(bin.c_str())};
   pid_t pid;
-  if (posix_spawn(&pid, bin, nullptr, nullptr, args, environ) == 0) {
+  if (posix_spawn(&pid, bin.c_str(), nullptr, nullptr, args, environ) == 0) {
     std::cout << "[Controller] Service spawned successfuly. PID: " << pid
               << std::endl;
     return true;
@@ -64,8 +65,8 @@ bool InitServer() {
 }  // namespace
 
 int main() {
-  if (!SpawnService(USER_BIN)) { exit(1); }
-  if (!SpawnService(FOLLOWER_BIN)) { exit(1); }
+  if (!SpawnService(CURR_DIR + USER_BIN)) { exit(1); }
+  if (!SpawnService(CURR_DIR + FOLLOWER_BIN)) { exit(1); }
 
   if (!InitServer()) {
     std::cerr << "[Controller] Failed to listen on port: " << CONTROLLER_PORT
