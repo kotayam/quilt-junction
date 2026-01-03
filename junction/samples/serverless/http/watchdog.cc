@@ -17,7 +17,7 @@ bool WatchDog::InitServer() {
   httplib::Server svr;
   svr.Get(".*", handler_);
 
-  if (!svr.set_address_family(AF_INET).listen(sock_path_, 80)) {
+  if (!svr.set_address_family(AF_UNIX).listen(sock_path_, 80)) {
     std::cerr << "[Watchdog] Failed to listen on " << sock_path_ << std::endl;
     return false;
   }
