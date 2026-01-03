@@ -19,7 +19,7 @@ const std::string FOLLOWER_SOCK = "follower.sock";
 namespace {
 
 bool SpawnService(const std::string &bin) {
-  char *args[] = {const_cast<char *>(bin.c_str())};
+  char *args[] = {const_cast<char *>(bin.c_str()), nullptr};
   pid_t pid;
   if (posix_spawn(&pid, bin.c_str(), nullptr, nullptr, args, environ) == 0) {
     std::cout << "[Controller] Service spawned successfuly. PID: " << pid
