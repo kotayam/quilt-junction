@@ -45,13 +45,13 @@ add_executable(controller
 add_executable(user_service
     user_service.cc
     lib/httplib.h
-    watchdog.h
-    gateway_client.h
+    watchdog.cc
+    gateway_client.cc
 )
 
 add_executable(follower_service
     follower_service.cc
     lib/httplib.h
-    watchdog.h
-    gateway_client.h
+    watchdog.cc
+    gateway_client.cc
 )
