@@ -40,3 +40,18 @@ add_executable(controller
     controller.cc
     lib/httplib.h
 )
+
+# services
+add_executable(user_service
+    user_service.cc
+    lib/httplib.h
+    watchdog.h
+    gateway_client.h
+)
+
+add_executable(follower_service
+    follower_service.cc
+    lib/httplib.h
+    watchdog.h
+    gateway_client.h
+)
