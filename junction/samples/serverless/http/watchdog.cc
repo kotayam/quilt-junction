@@ -1,19 +1,32 @@
 #include "watchdog.h"
 
+#include <sys/stat.h>
+#include <unistd.h>
+
 #include <iostream>
 #include <string>
 
 #include "lib/httplib.h"
 
-constexpr const char *SOCK_PATH = "/tmp/serverless/";
+constexpr const char *SOCK_DIR = "/tmp/serverless/";
 constexpr const char *SOCK_EXT = ".sock";
 
 WatchDog::WatchDog(const std::string &name, httplib::Server::Handler h)
     : handler_(std::move(h)) {
-  sock_path_ = SOCK_PATH + name + SOCK_EXT;
+  sock_path_ = SOCK_DIR + name + SOCK_EXT;
 }
 
 bool WatchDog::InitServer() {
+  struct stat st = {0};
+  if (stat(SOCK_DIR, &st) == -1) {
+    if (mkdir(SOCK_DIR, 0777) != 0 && errno != EEXIST) {
+      std::cerr << "[Watchdog] Failed to create directory: " << SOCK_DIR
+                << std::endl;
+      return false;
+    }
+  }
+  unlink(sock_path_.c_str());
+
   httplib::Server svr;
   svr.Get(".*", handler_);
 
