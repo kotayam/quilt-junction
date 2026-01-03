@@ -30,9 +30,10 @@ bool SpawnService(const std::string &bin) {
   return false;
 }
 
-httplib::Server::Handler SocketHandler(std::string_view sock_path) {
+httplib::Server::Handler SocketHandler(const std::string &sock_path) {
   return [sock_path](const httplib::Request &req, httplib::Response &res) {
-    httplib::Client cli(sock_path.data());
+    std::cout << "[Controller] Recieved request: " << req.path << std::endl;
+    httplib::Client cli(sock_path);
     cli.set_address_family(AF_UNIX);
     auto func_res = cli.Get(req.path, req.headers);
     if (func_res) {
