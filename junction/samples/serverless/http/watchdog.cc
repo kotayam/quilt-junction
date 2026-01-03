@@ -5,7 +5,7 @@
 
 #include "lib/httplib.h"
 
-constexpr const char *SOCK_PATH = "/tmp/serverless";
+constexpr const char *SOCK_PATH = "/tmp/serverless/";
 constexpr const char *SOCK_EXT = ".sock";
 
 WatchDog::WatchDog(const std::string &name, httplib::Server::Handler h)
@@ -16,10 +16,12 @@ WatchDog::WatchDog(const std::string &name, httplib::Server::Handler h)
 bool WatchDog::InitServer() {
   httplib::Server svr;
   svr.Get(".*", handler_);
+
   if (!svr.set_address_family(AF_INET).listen(sock_path_, 80)) {
-    std::cerr << "[Watchdog] Failed to listen on " << sock_path_;
+    std::cerr << "[Watchdog] Failed to listen on " << sock_path_ << std::endl;
     return false;
   }
+
   return true;
 }
 
