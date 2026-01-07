@@ -8,12 +8,20 @@
 #include "watchdog.h"
 
 namespace {
-std::unordered_map<int, std::vector<int>> followers_db = {
-    {0, {1, 2}},     // Alice is followed by Bob and Carrol
-    {1, {2}},        // Bob is followed by Carrol
-    {2, {0, 3}},     // Carrol is followed by Alice and David
-    {3, {0, 1, 2}},  // David is followed by Alice, Bob, and Carrol
-};
+
+std::unordered_map<int, std::vector<int>> GenerateFollowers(int count) {
+  std::unordered_map<int, std::vector<int>> db;
+  db.reserve(count);
+
+  for (int i = 0; i < count; ++i) {
+    std::vector<int> users;
+    for (int j = 0; j < i; j++) { users.push_back(j); }
+    db[i] = users;
+  }
+  return db;
+}
+
+std::unordered_map<int, std::vector<int>> followers_db = GenerateFollowers(100);
 
 void GetFollowersHandler(const httplib::Request &req, httplib::Response &res) {
   try {
