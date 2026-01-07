@@ -43,7 +43,9 @@ void GetFollowersHandler(const httplib::Request &req, httplib::Response &res) {
 }  // namespace
 
 int main(int argc, char *argv[]) {
-  if (std::strcmp(argv[1], "--int") == 0) { enable_interception = true; }
+  if (argc > 1 && std::strcmp(argv[1], "--int") == 0) {
+    enable_interception = true;
+  }
   WatchDog w("follower", "/followers/:id", GetFollowersHandler);
   w.Run();
   return 0;

@@ -72,7 +72,7 @@ bool InitServer() {
 
 int main(int argc, char *argv[]) {
   bool enable_interception = false;
-  if (std::strcmp(argv[1], "--int") == 0) {
+  if (argc > 1 && std::strcmp(argv[1], "--int") == 0) {
     enable_interception = true;
     std::cout << "[Controller] Interception enabled." << std::endl;
   }
