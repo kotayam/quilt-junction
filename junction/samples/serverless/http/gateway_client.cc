@@ -15,8 +15,8 @@ const std::string USER_SOCK = "/tmp/serverless/user.sock";
  * @param req
  * @return response
  */
-std::string CallGateway(std::string_view req) {
-  if (req.find("/user/") != std::string::npos) {
+std::string CallGateway(std::string_view req, bool enable_interception) {
+  if (enable_interception && req.find("/user/") != std::string::npos) {
     std::cout << "[CallGateway] Intercepted request: " << req << std::endl;
     httplib::Client sock_cli(USER_SOCK);
     sock_cli.set_address_family(AF_UNIX);
