@@ -24,8 +24,16 @@ This will run the controller.
 cd ./build/junction
 ```
 
+To run it normally,
+
 ```bash
 ./junction_run ./samples/serverless/http/caladan_controller.config -- ./samples/serverless/http/controller
+```
+
+If you want to enable the socket interception,
+
+```bash
+./junction_run ./samples/serverless/http/caladan_controller.config -- ./samples/serverless/http/controller --int
 ```
 
 ### Client
