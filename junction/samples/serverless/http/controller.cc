@@ -21,19 +21,17 @@ const std::string SHIM_SO = "libshim.so";
 
 namespace {
 
-bool SpawnService(const std::string &bin, bool enable_interception,
-                  bool enable_shim) {
+bool SpawnService(const std::string &bin, bool enable_interception) {
   // create args
   std::vector<char *> args;
   args.push_back(const_cast<char *>(bin.c_str()));
-  if (enable_interception) { args.push_back(const_cast<char *>("--int")); }
   args.push_back(nullptr);
 
   // create envs
   std::vector<char *> envs;
-  for (char **env = environ; *env != 0; env++) { envs.push_back(*env); }
+  for (char **env = environ; *env != nullptr; env++) { envs.push_back(*env); }
   std::string preload_str;
-  if (enable_shim) {
+  if (enable_interception) {
     preload_str = "LD_PRELOAD=" + CURR_DIR + SHIM_SO;
     envs.push_back(const_cast<char *>(preload_str.c_str()));
   }
@@ -42,7 +40,7 @@ bool SpawnService(const std::string &bin, bool enable_interception,
   // log command
   std::stringstream log_ss;
   log_ss << "[Controller] Spawning: ";
-  if (enable_shim) { log_ss << preload_str << " "; }
+  if (enable_interception) { log_ss << preload_str << " "; }
   for (auto *arg : args) {
     if (arg != nullptr) { log_ss << arg << " "; }
   }
@@ -101,11 +99,9 @@ int main(int argc, char *argv[]) {
     enable_interception = true;
     std::cout << "[Controller] Interception enabled." << std::endl;
   }
-  if (!SpawnService(CURR_DIR + USER_BIN, false, true)) { exit(1); }
-  if (!SpawnService(CURR_DIR + FOLLOWER_BIN, enable_interception, true)) {
-    exit(1);
-  }
-  if (!SpawnService(CURR_DIR + PROXY_BIN, false, false)) { exit(1); }
+  if (!SpawnService(CURR_DIR + USER_BIN, enable_interception)) { exit(1); }
+  if (!SpawnService(CURR_DIR + FOLLOWER_BIN, enable_interception)) { exit(1); }
+  if (!SpawnService(CURR_DIR + PROXY_BIN, false)) { exit(1); }
 
   if (!InitServer()) {
     std::cerr << "[Controller] Failed to listen on port: " << CONTROLLER_PORT
