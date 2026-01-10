@@ -69,7 +69,8 @@ def run_test_suite(host, port, request_count=1000):
     try:
         conn = http.client.HTTPConnection(host, port, timeout=5)
 
-        for path in paths:
+        for idx, path in enumerate(paths):
+            print(f"\rProgress: {idx+1}/{request_count}", end="", flush=True)
             # --- USE HELPER ---
             latency, resp, _ = send_measured_request(conn, "GET", path)
             latencies.append(latency)
