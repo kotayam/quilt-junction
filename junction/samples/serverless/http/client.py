@@ -61,7 +61,7 @@ def run_test_suite(host, port, request_count=1000):
         return
 
     # 3. THE REAL TEST
-    print(f"Sending {request_count} requests...", end="", flush=True)
+    print(f"Sending {request_count} requests...", flush=True)
     
     latencies = []
     start_total = time.time()
