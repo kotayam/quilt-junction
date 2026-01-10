@@ -17,10 +17,17 @@ const std::string SOCK_PATH = "/tmp/serverless/";
 const std::string USER_SOCK = "user.sock";
 const std::string FOLLOWER_SOCK = "follower.sock";
 
+const std::string SHIM_SO = "libshim.so";
+
 namespace {
 
-bool SpawnService(const std::string &bin, bool enable_interception) {
+bool SpawnService(const std::string &bin, bool enable_interception,
+                  bool enable_shim) {
   std::vector<char *> args;
+  if (enable_shim) {
+    args.push_back(
+        const_cast<char *>(("LD_PRELOAD=" + CURR_DIR + SHIM_SO).c_str()));
+  }
   args.push_back(const_cast<char *>(bin.c_str()));
   if (enable_interception) { args.push_back(const_cast<char *>("--int")); }
   args.push_back(nullptr);
@@ -77,9 +84,11 @@ int main(int argc, char *argv[]) {
     enable_interception = true;
     std::cout << "[Controller] Interception enabled." << std::endl;
   }
-  if (!SpawnService(CURR_DIR + USER_BIN, false)) { exit(1); }
-  if (!SpawnService(CURR_DIR + FOLLOWER_BIN, enable_interception)) { exit(1); }
-  if (!SpawnService(CURR_DIR + PROXY_BIN, false)) { exit(1); }
+  if (!SpawnService(CURR_DIR + USER_BIN, false, true)) { exit(1); }
+  if (!SpawnService(CURR_DIR + FOLLOWER_BIN, enable_interception, true)) {
+    exit(1);
+  }
+  if (!SpawnService(CURR_DIR + PROXY_BIN, false, false)) { exit(1); }
 
   if (!InitServer()) {
     std::cerr << "[Controller] Failed to listen on port: " << CONTROLLER_PORT
