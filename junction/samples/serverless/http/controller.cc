@@ -115,7 +115,7 @@ int main(int argc, char *argv[]) {
       std::cout << "[Controller] Interception enabled." << std::endl;
     } else if (std::strcmp(argv[i], "--lang") == 0 && i + 1 < argc) {
       if (std::strcmp(argv[i + 1], "py") == 0) {
-        use_python = false;
+        use_python = true;
         std::cout << "[Controller] Language: Python selected." << std::endl;
       }
       i++;
