@@ -61,5 +61,9 @@ add_executable(proxy_service
     lib/httplib.h
 )
 
+# python
+file(COPY watchdog.py ${CMAKE_CURRENT_BINARY_DIR}/watchdog.py)
+file(COPY user_service.py ${CMAKE_CURRENT_BINARY_DIR}/user_service.py)
+
 # shim
 add_library(shim SHARED shim.cc)
