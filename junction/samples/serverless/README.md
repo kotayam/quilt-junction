@@ -42,9 +42,15 @@ If you want to enable the socket interception,
 ./junction_run ./samples/serverless/http/caladan_controller.config -- ./samples/serverless/http/controller --int
 ```
 
+If you want to run the function in a different language (e.g. python),
+
+```bash
+./junction_run ./samples/serverless/http/caladan_controller.config -- ./samples/serverless/http/controller --lang py
+```
+
 ### Client
 
-This will run the client.
+This will run the client (not a junction instance).
 
 ```bash
 cd ./junction/samples/serverless/http
