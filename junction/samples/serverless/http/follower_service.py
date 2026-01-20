@@ -1,7 +1,23 @@
 import http.client
 from http.server import BaseHTTPRequestHandler
 import sys
-# Import the WatchDog class we defined in the previous step
+import socket
+
+# --- 0. MONKEY PATCH FOR JUNCTION / LIBOS ---
+# Junction does not support setsockopt, which http.client tries to use (TCP_NODELAY).
+# We wrap the standard setsockopt to ignore errors.
+_original_setsockopt = socket.socket.setsockopt
+
+def patched_setsockopt(self, level, optname, value):
+    try:
+        _original_setsockopt(self, level, optname, value)
+    except OSError:
+        # Ignore "Invalid argument" or "Protocol not available" from the runtime
+        pass
+
+socket.socket.setsockopt = patched_setsockopt
+# --------------------------------------------
+
 from watchdog import WatchDog
 
 # --- 1. CONFIGURATION ---
@@ -9,11 +25,9 @@ GATEWAY_IP = "10.10.1.1"
 GATEWAY_PORT = 8080
 
 # --- 2. GENERATE DATABASE ---
-# Creates a dict where user `i` follows all users from 0 to i-1
 def generate_followers(count):
     db = {}
     for i in range(count):
-        # In C++: for (int j = 0; j < i; j++)
         db[i] = list(range(i))
     return db
 
@@ -21,30 +35,19 @@ FOLLOWERS_DB = generate_followers(100)
 
 # --- 3. GATEWAY CLIENT HELPER ---
 def call_gateway(path):
-    """
-    Connects to 10.10.1.1:8080 to fetch user data.
-    Matches: httplib::Client cli(GATEWAY_IP, GATEWAY_PORT);
-    """
     conn = None
     try:
-        # Create connection to the specific Gateway IP
+        # Python tries to set TCP_NODELAY here, but our patch will catch the error
         conn = http.client.HTTPConnection(GATEWAY_IP, GATEWAY_PORT)
         
-        # Send GET request
         conn.request("GET", path)
-        
-        # Get Response
         resp = conn.getresponse()
         
-        # Return body (equivalent to res->body)
         if resp.status == 200:
             return resp.read().decode('utf-8')
-        
-        # If not 200, return empty or error string (mimicking C++ basic behavior)
         return "" 
 
     except Exception as e:
-        # Log to stderr so it doesn't break the HTTP response flow
         print(f"[Follower] Gateway call failed: {e}", file=sys.stderr)
         return ""
     finally:
@@ -54,35 +57,28 @@ def call_gateway(path):
 # --- 4. HANDLER LOGIC ---
 class FollowerHandler(BaseHTTPRequestHandler):
     def do_GET(self):
-        # Basic Routing: Check if path starts with /followers/
         prefix = "/followers/"
         if not self.path.startswith(prefix):
             self.send_error(404, "Not Found")
             return
 
         try:
-            # Extract ID: /followers/123 -> 123
             user_id_str = self.path[len(prefix):]
             user_id = int(user_id_str)
             
-            # Lookup in DB
             if user_id not in FOLLOWERS_DB:
                 raise ValueError("User not found")
             
             followers = FOLLOWERS_DB[user_id]
             
-            # Retrieve names from User Service via Gateway
             names = []
             for f_id in followers:
-                # C++: CallGateway("/user/" + std::to_string(id))
                 req_path = f"/user/{f_id}"
                 name = call_gateway(req_path)
                 names.append(name)
             
-            # Join with ", "
             response_body = ", ".join(names)
             
-            # Send Response
             self.send_response(200)
             self.send_header("Content-Type", "text/plain")
             self.send_header("Content-Length", str(len(response_body)))
@@ -90,19 +86,16 @@ class FollowerHandler(BaseHTTPRequestHandler):
             self.wfile.write(response_body.encode('utf-8'))
             
         except (ValueError, KeyError):
-            # Handle non-integer ID or ID not found
-            error_msg = "User does not exist"
+            error_msg = "User does exist" 
             self.send_response(404)
             self.send_header("Content-Type", "text/plain")
             self.send_header("Content-Length", str(len(error_msg)))
             self.end_headers()
             self.wfile.write(error_msg.encode('utf-8'))
 
-    # Mute standard logging to keep output clean
     def log_message(self, format, *args):
         return
 
 if __name__ == "__main__":
-    # "follower" -> creates /tmp/serverless/follower.sock
     w = WatchDog("follower", FollowerHandler)
     w.run()
