@@ -19,7 +19,7 @@ const std::string FOLLOWER_SOCK = "follower.sock";
 
 const std::string SHIM_SO = "libshim.so";
 
-const std::string PYTHON = "/usr/bin/python3";
+const std::string PYTHON = "/usr/local/src/Python-3.9.18/python";
 
 namespace {
 
