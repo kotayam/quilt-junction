@@ -23,6 +23,8 @@ const std::string PYTHON = "/usr/bin/python3";
 
 namespace {
 
+enum class ServiceLang : std::uint8_t { CPP, PYTHON };
+
 std::vector<char *> MakeArgv(const std::string &bin,
                              const std::vector<std::string> &args) {
   std::vector<char *> argv;
@@ -108,20 +110,32 @@ bool InitServer() {
 
 int main(int argc, char *argv[]) {
   bool enable_interception = false;
-  bool use_python = false;
+
+  ServiceLang user_lang = ServiceLang::CPP;
+  ServiceLang follower_lang = ServiceLang::CPP;
+
   for (int i = 1; i < argc; i++) {
     if (std::strcmp(argv[i], "--int") == 0) {
       enable_interception = true;
       std::cout << "[Controller] Interception enabled." << std::endl;
     } else if (std::strcmp(argv[i], "--lang") == 0 && i + 1 < argc) {
-      if (std::strcmp(argv[i + 1], "py") == 0) {
-        use_python = true;
-        std::cout << "[Controller] Language: Python selected." << std::endl;
+      std::string mode = argv[i + 1];
+      if (mode == "py") {
+        user_lang = ServiceLang::PYTHON;
+        follower_lang = ServiceLang::PYTHON;
+        std::cout << "[Controller] Mode: All Python" << std::endl;
+      } else if (mode == "hybrid") {
+        user_lang = ServiceLang::PYTHON;
+        follower_lang = ServiceLang::CPP;
+        std::cout << "[Controller] Mode: Hybrid (User=Py, Follower=C++)"
+                  << std::endl;
+      } else {
+        std::cout << "[Controller] Mode: All C++ (Default)" << std::endl;
       }
       i++;
     }
   }
-  if (use_python) {
+  if (user_lang == ServiceLang::PYTHON) {
     if (!SpawnService(PYTHON, {CURR_DIR + USER_BIN + ".py"},
                       enable_interception)) {
       exit(1);
@@ -131,9 +145,18 @@ int main(int argc, char *argv[]) {
       exit(1);
     }
   }
-  if (!SpawnService(CURR_DIR + FOLLOWER_BIN, {}, enable_interception)) {
-    exit(1);
+
+  if (follower_lang == ServiceLang::PYTHON) {
+    if (!SpawnService(PYTHON, {CURR_DIR + FOLLOWER_BIN + ".py"},
+                      enable_interception)) {
+      exit(1);
+    }
+  } else {
+    if (!SpawnService(CURR_DIR + FOLLOWER_BIN, {}, enable_interception)) {
+      exit(1);
+    }
   }
+
   if (!SpawnService(CURR_DIR + PROXY_BIN, {}, false)) { exit(1); }
 
   if (!InitServer()) {
