@@ -5,12 +5,12 @@ import sys
 from watchdog import WatchDog
 
 # --- 1. CONFIGURATION ---
-PROXY_HOST = "127.0.0.1"
-PROXY_PORT = 9000  # The Sidecar listens here
+GATEWAY_IP = "10.10.1.1"
+GATEWAY_PORT = 8080
 
 # --- 2. GENERATE DATABASE ---
 # Creates a dict where user `i` follows all users from 0 to i-1
-def generate_followers(count):
+def generjte_followers(count):
     db = {}
     for i in range(count):
         # In C++: for (int j = 0; j < i; j++)
@@ -26,8 +26,8 @@ def call_gateway(path):
     Connects to the local Sidecar (Proxy) to fetch data.
     """
     try:
-        # Connect to the Sidecar listening on port 9000
-        conn = http.client.HTTPConnection(PROXY_HOST, PROXY_PORT, timeout=5)
+        # Connect to the Gateway listening on port 8080
+        conn = http.client.HTTPConnection(GATEWAY_IP, GATEWAY_PORT, timeout=5)
         conn.request("GET", path)
         resp = conn.getresponse()
         if resp.status == 200:
