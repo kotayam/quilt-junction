@@ -10,7 +10,7 @@ GATEWAY_PORT = 8080
 
 # --- 2. GENERATE DATABASE ---
 # Creates a dict where user `i` follows all users from 0 to i-1
-def generjte_followers(count):
+def generate_followers(count):
     db = {}
     for i in range(count):
         # In C++: for (int j = 0; j < i; j++)
