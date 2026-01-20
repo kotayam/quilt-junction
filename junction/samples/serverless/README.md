@@ -48,6 +48,8 @@ If you want to run the function in a different language (e.g. python),
 ./junction_run ./samples/serverless/http/caladan_controller.config -- ./samples/serverless/http/controller --lang py
 ```
 
+`--lang py` will run all services in python, `--lang hybrid` will run the user service in python and the follower service in c++.
+
 ### Client
 
 This will run the client (not a junction instance).
