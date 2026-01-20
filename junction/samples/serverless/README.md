@@ -56,9 +56,19 @@ This will run the client (not a junction instance).
 cd ./junction/samples/serverless/http
 ```
 
+To run a interactive client,
+
 ```bash
 python client.py 10.10.1.1 8080
 ```
+
+To run a test,
+
+```bash
+python client.py 10.10.1.1 8080 --test [-n 1000]
+```
+
+The `-n` flag is optional and controls how many requests to be sent. The default is 1000 requests.
 
 ## Serverless Channel
 
