@@ -20,7 +20,7 @@ set(caladan_gateway_config_path
 )
 file(WRITE ${caladan_gateway_config_path} ${caladan_gateway_config})
 
-add_executable(gateway 
+add_executable(gateway
     gateway.cc
     lib/httplib.h
 )
@@ -36,7 +36,7 @@ set(caladan_controller_config_path
 )
 file(WRITE ${caladan_controller_config_path} ${caladan_controller_config})
 
-add_executable(controller 
+add_executable(controller
     controller.cc
     lib/httplib.h
 )
@@ -62,8 +62,9 @@ add_executable(proxy_service
 )
 
 # python
-file(COPY watchdog.py 
-    user_service.py 
+file(COPY watchdog.py
+    user_service.py
+    follower_service.py
     DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 # shim
