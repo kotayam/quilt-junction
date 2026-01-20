@@ -22,22 +22,34 @@ FOLLOWERS_DB = generate_followers(100)
 # --- 3. GATEWAY CLIENT HELPER ---
 def call_gateway(path):
     """
-    Equivalent to C++ CallGateway(path).
-    Connects to the local Sidecar (Proxy) to fetch data.
+    Connects to 10.10.1.1:8080 to fetch user data.
+    Matches: httplib::Client cli(GATEWAY_IP, GATEWAY_PORT);
     """
+    conn = None
     try:
-        # Connect to the Gateway listening on port 8080
-        conn = http.client.HTTPConnection(GATEWAY_IP, GATEWAY_PORT, timeout=5)
+        # Create connection to the specific Gateway IP
+        conn = http.client.HTTPConnection(GATEWAY_IP, GATEWAY_PORT)
+        
+        # Send GET request
         conn.request("GET", path)
+        
+        # Get Response
         resp = conn.getresponse()
+        
+        # Return body (equivalent to res->body)
         if resp.status == 200:
             return resp.read().decode('utf-8')
-        return "" # Handle error or empty response
+        
+        # If not 200, return empty or error string (mimicking C++ basic behavior)
+        return "" 
+
     except Exception as e:
+        # Log to stderr so it doesn't break the HTTP response flow
         print(f"[Follower] Gateway call failed: {e}", file=sys.stderr)
-        return "Unknown"
+        return ""
     finally:
-        conn.close()
+        if conn:
+            conn.close()
 
 # --- 4. HANDLER LOGIC ---
 class FollowerHandler(BaseHTTPRequestHandler):
