@@ -30,7 +30,6 @@ bool WatchDog::InitServer() {
   unlink(sock_path_.c_str());
 
   httplib::Server svr;
-  svr.set_keep_alive_max_count(2000);
   svr.Get(req_path_, handler_);
 
   if (!svr.set_address_family(AF_UNIX).listen(sock_path_, 80)) {

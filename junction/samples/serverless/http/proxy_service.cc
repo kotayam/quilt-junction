@@ -35,7 +35,6 @@ void ProxyHandler(const httplib::Request &req, httplib::Response &res) {
 
 int main() {
   httplib::Server svr;
-  svr.set_keep_alive_max_count(2000);
   svr.Get(".*", ProxyHandler);
   svr.Post(".*", ProxyHandler);
   svr.Put(".*", ProxyHandler);

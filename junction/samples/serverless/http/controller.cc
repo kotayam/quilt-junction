@@ -108,9 +108,6 @@ httplib::Server::Handler SocketHandler(const std::string &sock_path) {
 
 bool InitServer() {
   httplib::Server svr;
-
-  svr.set_keep_alive_max_count(2000);
-
   svr.Get("/user/:id", SocketHandler(SOCK_PATH + USER_SOCK));
   svr.Get("/followers/:id", SocketHandler(SOCK_PATH + FOLLOWER_SOCK));
 

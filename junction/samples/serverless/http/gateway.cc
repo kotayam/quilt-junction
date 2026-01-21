@@ -96,9 +96,6 @@ int main(int argc, char *argv[]) {
   CheckSilentMode(argc, argv);
 
   httplib::Server svr;
-
-  svr.set_keep_alive_max_count(2000);
-
   svr.Get(".*", ProxyHandler);
   svr.Post(".*", ProxyHandler);
   svr.Put(".*", ProxyHandler);

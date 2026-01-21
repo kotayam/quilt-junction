@@ -14,7 +14,14 @@ const std::string USER_SOCK = "/tmp/serverless/user.sock";
  * @return response
  */
 std::string CallGateway(std::string_view req) {
-  httplib::Client cli(GATEWAY_IP, GATEWAY_PORT);
+  static thread_local httplib::Client cli(GATEWAY_IP, GATEWAY_PORT);
   auto res = cli.Get(std::string(req));
+
+  // retry
+  if (!res) {
+    std::cout << "[CallGateway] Attempting to retry" << std::endl;
+    cli.stop();
+    res = cli.Get(std::string(req));
+  }
   return res->body;
 }
