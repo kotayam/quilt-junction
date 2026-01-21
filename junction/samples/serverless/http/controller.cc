@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "lib/httplib.h"
+#include "log.h"
 
 extern char **environ;
 
@@ -109,6 +110,8 @@ bool InitServer() {
 }  // namespace
 
 int main(int argc, char *argv[]) {
+  CheckSilentMode(argc, argv);
+
   bool enable_interception = false;
 
   ServiceLang user_lang = ServiceLang::CPP;

@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "lib/httplib.h"
+#include "log.h"
 
 constexpr int GATEWAY_PORT = 8080;
 constexpr const char *CONTROLLER_IP = "10.10.1.2";
@@ -73,7 +74,9 @@ void ProxyHandler(const httplib::Request &req, httplib::Response &res) {
 
 }  // namespace
 
-int main() {
+int main(int argc, char *argv[]) {
+  CheckSilentMode(argc, argv);
+
   httplib::Server svr;
 
   svr.Get(".*", ProxyHandler);
