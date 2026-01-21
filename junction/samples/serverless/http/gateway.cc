@@ -42,7 +42,7 @@ void ProxyHandler(const httplib::Request &req, httplib::Response &res) {
             << req.path << std::endl;
 
   httplib::Client cli(CONTROLLER_IP, CONTROLLER_PORT);
-  cli.set_keep_alive(false);
+  cli.set_keep_alive(true);
   // cli.set_connection_timeout(0, TIMEOUT_US);
 
   httplib::Result ctrl_res;
