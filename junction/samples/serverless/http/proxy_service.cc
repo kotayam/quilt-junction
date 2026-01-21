@@ -14,7 +14,6 @@ void ProxyHandler(const httplib::Request &req, httplib::Response &res) {
     return;
   }
   httplib::Client cli(USER_SOCK);
-  cli.set_keep_alive(true);
   cli.set_address_family(AF_UNIX);
   auto func_res = cli.Get(req.path, req.headers);
   if (func_res) {
