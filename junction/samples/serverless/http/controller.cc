@@ -77,7 +77,7 @@ bool SpawnService(const std::string &bin, const std::vector<std::string> &args,
 httplib::Server::Handler SocketHandler(const std::string &sock_path) {
   return [sock_path](const httplib::Request &req, httplib::Response &res) {
     std::cout << "[Controller] Recieved request: " << req.path << std::endl;
-    httplib::Client cli(sock_path);
+    static thread_local httplib::Client cli(sock_path);
     cli.set_keep_alive(true);
     cli.set_address_family(AF_UNIX);
     auto func_res = cli.Get(req.path, req.headers);

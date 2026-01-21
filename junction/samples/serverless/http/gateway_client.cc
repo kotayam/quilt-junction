@@ -14,7 +14,7 @@ const std::string USER_SOCK = "/tmp/serverless/user.sock";
  * @return response
  */
 std::string CallGateway(std::string_view req) {
-  httplib::Client cli(GATEWAY_IP, GATEWAY_PORT);
+  static thread_local httplib::Client cli(GATEWAY_IP, GATEWAY_PORT);
   cli.set_keep_alive(true);
   auto res = cli.Get(std::string(req));
   return res->body;

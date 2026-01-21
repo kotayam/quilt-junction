@@ -41,7 +41,7 @@ void ProxyHandler(const httplib::Request &req, httplib::Response &res) {
   std::cout << std::unitbuf << "[Gateway] Forwarding " << req.method << " "
             << req.path << std::endl;
 
-  httplib::Client cli(CONTROLLER_IP, CONTROLLER_PORT);
+  static thread_local httplib::Client cli(CONTROLLER_IP, CONTROLLER_PORT);
   cli.set_keep_alive(true);
   // cli.set_connection_timeout(0, TIMEOUT_US);
 
