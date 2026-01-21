@@ -85,6 +85,7 @@ httplib::Server::Handler SocketHandler(const std::string &sock_path) {
 
     // retry
     if (!func_res) {
+      std::cout << "[Controller] Attempting to retry" << std::endl;
       cli.stop();
       func_res = cli.Get(req.path, req.headers);
     }

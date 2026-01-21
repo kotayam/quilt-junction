@@ -20,6 +20,7 @@ std::string CallGateway(std::string_view req) {
 
   // retry
   if (!res) {
+    std::cout << "[CallGateway] Attempting to retry" << std::endl;
     cli.stop();
     res = cli.Get(std::string(req));
   }

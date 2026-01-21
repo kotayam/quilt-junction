@@ -60,6 +60,7 @@ void ProxyHandler(const httplib::Request &req, httplib::Response &res) {
 
   // retry
   if (!ctrl_res) {
+    std::cout << "[Gateway] Attempting to retry" << std::endl;
     cli.stop();
     if (req.method == "GET") {
       ctrl_res = cli.Get(req.path, req.headers);
