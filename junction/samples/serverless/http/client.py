@@ -55,7 +55,6 @@ def run_test_suite(host, port, request_count=1000):
         # Warm up with a simple request
         for _ in range(20):
             send_measured_request(conn, "GET", "/followers/1")
-            time.sleep(0.01)
         print(" done.")
     except Exception as e:
         print(f"\n[!] Warm-up failed: {e}")
@@ -75,7 +74,6 @@ def run_test_suite(host, port, request_count=1000):
             # --- USE HELPER ---
             latency, resp, _ = send_measured_request(conn, "GET", path)
             latencies.append(latency)
-            time.sleep(0.01)
             
             if resp.status != 200:
                 print(f"!", end="") # Visual indicator of errors
