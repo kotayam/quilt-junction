@@ -1,7 +1,6 @@
 import http.client
 from http.server import BaseHTTPRequestHandler
 import sys
-import socket
 from watchdog import WatchDog
 import patch
 
