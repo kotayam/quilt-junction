@@ -42,7 +42,7 @@ void ProxyHandler(const httplib::Request &req, httplib::Response &res) {
             << req.path << std::endl;
 
   httplib::Client cli(CONTROLLER_IP, CONTROLLER_PORT);
-  cli.set_keep_alive(true);
+  cli.set_keep_alive(false);
   // cli.set_connection_timeout(0, TIMEOUT_US);
 
   httplib::Result ctrl_res;
@@ -79,6 +79,8 @@ int main(int argc, char *argv[]) {
   CheckSilentMode(argc, argv);
 
   httplib::Server svr;
+
+  svr.set_keep_alive_max_count(2000);
 
   svr.Get(".*", ProxyHandler);
   svr.Post(".*", ProxyHandler);
