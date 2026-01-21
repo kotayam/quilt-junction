@@ -2,11 +2,10 @@ import http.client
 from http.server import BaseHTTPRequestHandler
 import sys
 import socket
+from watchdog import WatchDog
 import patch
 
 patch.patch_socket()
-
-from watchdog import WatchDog
 
 # --- 1. CONFIGURATION ---
 GATEWAY_IP = "10.10.1.1"
