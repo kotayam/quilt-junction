@@ -80,7 +80,15 @@ httplib::Server::Handler SocketHandler(const std::string &sock_path) {
     static thread_local httplib::Client cli(sock_path);
     cli.set_keep_alive(true);
     cli.set_address_family(AF_UNIX);
+
     auto func_res = cli.Get(req.path, req.headers);
+
+    // retry
+    if (!func_res) {
+      cli.stop();
+      func_res = cli.Get(req.path, req.headers);
+    }
+
     if (func_res) {
       res.status = func_res->status;
       res.body = func_res->body;

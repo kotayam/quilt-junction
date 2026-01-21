@@ -58,6 +58,22 @@ void ProxyHandler(const httplib::Request &req, httplib::Response &res) {
     ctrl_res = cli.Delete(req.path, req.headers);
   }
 
+  // retry
+  if (!ctrl_res) {
+    cli.stop();
+    if (req.method == "GET") {
+      ctrl_res = cli.Get(req.path, req.headers);
+    } else if (req.method == "POST") {
+      ctrl_res = cli.Post(req.path, req.headers, req.body,
+                          req.get_header_value("Content-Type"));
+    } else if (req.method == "PUT") {
+      ctrl_res = cli.Put(req.path, req.headers, req.body,
+                         req.get_header_value("Content-Type"));
+    } else if (req.method == "DELETE") {
+      ctrl_res = cli.Delete(req.path, req.headers);
+    }
+  }
+
   if (ctrl_res) {
     res.status = ctrl_res->status;
     res.body = ctrl_res->body;
