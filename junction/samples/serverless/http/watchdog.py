@@ -2,9 +2,6 @@ import os
 import socket
 import sys
 from http.server import HTTPServer, BaseHTTPRequestHandler
-# import patch
-#
-# patch.patch_socket()
 
 SOCK_DIR = "/tmp/serverless/"
 SOCK_EXT = ".sock"
