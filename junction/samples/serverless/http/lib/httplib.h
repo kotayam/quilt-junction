@@ -314,21 +314,21 @@ using socket_t = int;
 // =========================================================================
 
 // 1. Patch setsockopt (Prevent "Unsupported" errors logs)
-inline int patched_setsockopt(int sockfd, int level, int optname, 
+inline int patched_setsockopt(int sockfd, int level, int optname,
                               const void *optval, socklen_t optlen) {
-    return 0; // Always pretend success
+  return 0;  // Always pretend success
 }
 
 // 2. Patch getsockopt (Prevent connection retry loops)
-inline int patched_getsockopt(int sockfd, int level, int optname, 
-                              void *optval, socklen_t *optlen) {
-    // If checking for SO_ERROR, we must zero out the value to signal "No Error"
-    if (optval && optlen && *optlen > 0) {
-        size_t safe_len = *optlen;
-        if (safe_len > sizeof(int)) safe_len = sizeof(int);
-        std::memset(optval, 0, safe_len);
-    }
-    return 0; // Always pretend success
+inline int patched_getsockopt(int sockfd, int level, int optname, void *optval,
+                              socklen_t *optlen) {
+  // If checking for SO_ERROR, we must zero out the value to signal "No Error"
+  if (optval && optlen && *optlen > 0) {
+    size_t safe_len = *optlen;
+    if (safe_len > sizeof(int)) safe_len = sizeof(int);
+    std::memset(optval, 0, safe_len);
+  }
+  return 0;  // Always pretend success
 }
 
 // 3. Apply the overrides
