@@ -132,6 +132,10 @@ Status<void> SnapshotPidToELF(pid_t pid, std::string_view metadata_path,
 Status<void> SnapshotProcToELF(Process *p, std::string_view metadata_path,
                                std::string_view elf_path);
 
+// Snapshots a process directly to a stream (diskless).
+// Stream format: [8-byte metadata length LE][metadata bytes][ELF bytes]
+Status<void> SnapshotProcToELFStream(Process *p, VectoredWriter &out);
+
 Status<std::shared_ptr<Process>> RestoreProcessFromELF(
     std::string_view metadata_path, std::string_view elf_path);
 
