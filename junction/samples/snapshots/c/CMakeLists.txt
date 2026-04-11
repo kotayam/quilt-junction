@@ -24,3 +24,7 @@ endforeach()
 add_executable(yes
 	yes.cc
 )
+
+add_executable(counter_service
+  counter_service.cc
+)
