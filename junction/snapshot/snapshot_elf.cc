@@ -31,6 +31,11 @@ Status<void> WriteU64LE(VectoredWriter &w, uint64_t v) {
   return WritevFull(w, {&iov, 1});
 }
 
+Status<void> WriteU8(VectoredWriter &w, uint8_t v) {
+  iovec iov = {&v, sizeof(v)};
+  return WritevFull(w, {&iov, 1});
+}
+
 Status<std::pair<std::vector<elf_phdr>, std::vector<iovec>>> GetElfPHDRs(
     MemoryMap &mm, SnapshotContext &ctx) {
   const std::vector<VMArea> vmas = mm.get_vmas();
@@ -206,6 +211,7 @@ Status<void> SnapshotProcToELFStream(Process *p, VectoredWriter &out) {
     SerializeUnixSocketState(ar);
   }
 
+  if (Status<void> ret = WriteU8(out, static_cast<uint8_t>(MigrationType::kStopAndCopy)); !ret) return ret;
   if (Status<void> ret = WriteU64LE(out, metadata_buf.size()); !ret) return ret;
   iovec meta_iov = {metadata_buf.data(), metadata_buf.size()};
   if (Status<void> ret = WritevFull(out, {&meta_iov, 1}); !ret) return ret;
@@ -278,6 +284,101 @@ Status<std::shared_ptr<Process>> RestoreProcessFromELF(
 
   // mark threads as runnable
   // (must be last things to run, this will get the snapshot running)
+  p->RunThreads();
+  return p;
+}
+
+// Restores a process from a stream produced by SnapshotProcToELFStream.
+// Stream format: [8-byte metadata length LE][metadata bytes][ELF bytes]
+Status<std::shared_ptr<Process>> RestoreProcessFromELFStream(
+    VectoredReader &in) {
+  rt::RuntimeLibcGuard guard;
+
+  // Read and dispatch on migration type.
+  uint8_t migration_type = 0;
+  iovec type_iov = {&migration_type, sizeof(migration_type)};
+  if (Status<void> ret = ReadvFull(in, {&type_iov, 1}); !ret) return MakeError(ret);
+  if (migration_type != static_cast<uint8_t>(MigrationType::kStopAndCopy)) {
+    LOG(ERR) << "unsupported migration type: " << migration_type;
+    return MakeError(EINVAL);
+  }
+
+  // Read metadata length prefix.
+  uint64_t metadata_len = 0;
+  {
+    iovec iov = {&metadata_len, sizeof(metadata_len)};
+    if (Status<void> ret = ReadvFull(in, {&iov, 1}); !ret) return MakeError(ret);
+  }
+
+  // Read metadata into a buffer.
+  std::vector<std::byte> metadata_buf(metadata_len);
+  {
+    iovec iov = {metadata_buf.data(), metadata_buf.size()};
+    if (Status<void> ret = ReadvFull(in, {&iov, 1}); !ret) return MakeError(ret);
+  }
+
+  // Deserialize metadata.
+  struct VecReader {
+    std::span<const std::byte> remaining;
+    Status<size_t> Read(std::span<std::byte> dst) {
+      size_t n = std::min(dst.size(), remaining.size());
+      std::copy_n(remaining.begin(), n, dst.begin());
+      remaining = remaining.subspan(n);
+      return n ? n : Status<size_t>(MakeError(EUNEXPECTEDEOF));
+    }
+  } vr{metadata_buf};
+  StreamBufferReader<VecReader> sbr(vr);
+  std::istream instream(&sbr);
+  cereal::BinaryInputArchive ar(instream);
+
+  if (Status<void> ret = FSRestore(ar); unlikely(!ret)) return MakeError(ret);
+  timings().restore_metadata_start = Time::Now();
+
+  std::shared_ptr<Process> p;
+  ar(p);
+  SerializeUnixSocketState(ar);
+  timings().restore_data_start = Time::Now();
+
+  // Buffer the ELF data into a tmpfile so LoadELF can seek/mmap it.
+  Status<KernelFile> tmp =
+      KernelFile::Open("/tmp/junction_migrate.elf", O_CREAT | O_TRUNC,
+                       FileMode::kReadWrite, 0600);
+  if (unlikely(!tmp)) return MakeError(tmp);
+
+  {
+    std::array<std::byte, 65536> buf;
+    while (true) {
+      iovec iov = {buf.data(), buf.size()};
+      Status<size_t> n = in.Readv({&iov, 1});
+      if (!n || *n == 0) break;
+      iovec wiov = {buf.data(), *n};
+      if (Status<void> ret = WritevFull(*tmp, {&wiov, 1}); !ret)
+        return MakeError(ret);
+    }
+  }
+
+  Status<JunctionFile> elf =
+      JunctionFile::Open(p->get_fs(), "/tmp/junction_migrate.elf", 0,
+                         FileMode::kRead);
+  if (unlikely(!elf)) return MakeError(elf);
+
+  MemoryMap mm(nullptr, kMemoryMappingSize);
+  mm.MarkAsFake();
+  Status<elf_data> ret = LoadELF(mm, *elf, p->get_fs());
+  if (GetCfg().restore_populate()) {
+    mm.ForEachVMA([](const VMArea &vma) {
+      if (!(vma.prot & PROT_READ)) return;
+      KernelMAdvise(vma.Addr(), vma.Length(), MADV_POPULATE_READ);
+    });
+  }
+
+  if (unlikely(!ret)) {
+    LOG(ERR) << "Elf load failed (stream restore): " << ret.error();
+    return MakeError(ret);
+  }
+
+  if (unlikely(GetCfg().mem_trace())) p->get_mem_map().EnableTracing(*p.get());
+
   p->RunThreads();
   return p;
 }
