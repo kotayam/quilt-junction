@@ -370,7 +370,7 @@ Status<void> InitControlServer() {
   LOG(INFO) << "started control server on port " << GetCfg().port();
   rt::Spawn([q = std::move(*q)] mutable { ControlServer(q); });
 
-  uint16_t mig_port = GetCfg().port() + 1;
+  uint16_t mig_port = GetCfg().port() + 2;
   Status<rt::TCPQueue> mq = rt::TCPQueue::Listen({0, mig_port}, 4096);
   if (!mq) return MakeError(mq);
   LOG(INFO) << "started migration server on port " << mig_port;
