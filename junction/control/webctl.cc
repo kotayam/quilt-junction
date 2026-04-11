@@ -345,32 +345,11 @@ void MigrationServer(rt::TCPQueue &q) {
     if (!c) panic("couldn't accept a migration connection");
     rt::Spawn([c = std::move(*c)] mutable {
       Status<std::shared_ptr<Process>> p = RestoreProcessFromELFStream(c);
-      if (!p) LOG(ERR) << "migration restore failed: " << p.error();
-      else LOG(INFO) << "migration restore succeeded, pid=" << (*p)->get_pid();
-    });
-  }
-}
-
-void MigrationServer(rt::TCPQueue &q) {
-  while (true) {
-    Status<rt::TCPConn> c = q.Accept();
-    if (!c) panic("couldn't accept a migration connection");
-    rt::Spawn([c = std::move(*c)] mutable {
-      Status<std::shared_ptr<Process>> p = RestoreProcessFromELFStream(c);
-      if (!p) LOG(ERR) << "migration restore failed: " << p.error();
-      else LOG(INFO) << "migration restore succeeded, pid=" << (*p)->get_pid();
-    });
-  }
-}
-
-void MigrationServer(rt::TCPQueue &q) {
-  while (true) {
-    Status<rt::TCPConn> c = q.Accept();
-    if (!c) panic("couldn't accept a migration connection");
-    rt::Spawn([c = std::move(*c)] mutable {
-      Status<std::shared_ptr<Process>> p = RestoreProcessFromELFStream(c);
-      if (!p) LOG(ERR) << "migration restore failed: " << p.error();
-      else LOG(INFO) << "migration restore succeeded, pid=" << (*p)->get_pid();
+      if (!p) {
+        LOG(ERR) << "migration restore failed: " << p.error();
+      } else {
+        LOG(INFO) << "migration restore succeeded, pid=" << (*p)->get_pid();
+      }
     });
   }
 }
