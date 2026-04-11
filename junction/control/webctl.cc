@@ -1,6 +1,7 @@
 #include <charconv>
 
 #include "junction/base/string.h"
+#include "junction/base/finally.h"
 #include "junction/bindings/log.h"
 #include "junction/bindings/net.h"
 #include "junction/bindings/thread.h"
@@ -257,6 +258,42 @@ bool HandlePS(ControlConn &c, const ctl_schema::PSRequest *req) {
   }
   return false;
 }
+bool HandleMigrateStopAndCopy(ControlConn &c,
+                              const ctl_schema::MigrateRequest *req) {
+  LOG(INFO) << "handling stop-and-copy migration for pid " << req->pid();
+
+  std::shared_ptr<Process> p = Process::Find(req->pid());
+  if (!p) {
+    std::ostringstream msg;
+    msg << "migrate: pid " << req->pid() << " not found";
+    if (!c.SendError(msg.str())) LOG(WARN) << "ctl: failed to send error";
+    return false;
+  }
+
+  netaddr dest = {req->dest_ip(), req->dest_port()};
+  Status<rt::TCPConn> conn = rt::TCPConn::Dial({0, 0}, dest);
+  if (!conn) {
+    std::ostringstream msg;
+    msg << "migrate: failed to connect to destination: " << conn.error();
+    if (!c.SendError(msg.str())) LOG(WARN) << "ctl: failed to send error";
+    return false;
+  }
+
+  p->JobControlStop();
+  p->WaitForFullStop();
+  auto resume = finally([&] { p->DoExit(0); });
+
+  if (Status<void> ret = SnapshotProcToELFStream(p.get(), *conn); !ret) {
+    std::ostringstream msg;
+    msg << "migrate: snapshot failed: " << ret.error();
+    if (!c.SendError(msg.str())) LOG(WARN) << "ctl: failed to send error";
+    return false;
+  }
+
+  if (!c.SendSuccess()) LOG(WARN) << "ctl: failed to send success";
+  return false;
+}
+
 bool HandleRequest(ControlConn &c, const ctl_schema::Request *req) {
   switch (req->inner_type()) {
     case ctl_schema::InnerRequest_run:
@@ -275,6 +312,8 @@ bool HandleRequest(ControlConn &c, const ctl_schema::Request *req) {
       return HandleGetStats(c, req->inner_as_getStats());
     case ctl_schema::InnerRequest_ps:
       return HandlePS(c, req->inner_as_ps());
+    case ctl_schema::InnerRequest_migrate:
+      return HandleMigrateStopAndCopy(c, req->inner_as_migrate());
     default:
       // TODO(control): send error back
       return true;
