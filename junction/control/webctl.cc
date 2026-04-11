@@ -339,6 +339,42 @@ void ControlWorker(ControlConn c) {
   }
 }
 
+void MigrationServer(rt::TCPQueue &q) {
+  while (true) {
+    Status<rt::TCPConn> c = q.Accept();
+    if (!c) panic("couldn't accept a migration connection");
+    rt::Spawn([c = std::move(*c)] mutable {
+      Status<std::shared_ptr<Process>> p = RestoreProcessFromELFStream(c);
+      if (!p) LOG(ERR) << "migration restore failed: " << p.error();
+      else LOG(INFO) << "migration restore succeeded, pid=" << (*p)->get_pid();
+    });
+  }
+}
+
+void MigrationServer(rt::TCPQueue &q) {
+  while (true) {
+    Status<rt::TCPConn> c = q.Accept();
+    if (!c) panic("couldn't accept a migration connection");
+    rt::Spawn([c = std::move(*c)] mutable {
+      Status<std::shared_ptr<Process>> p = RestoreProcessFromELFStream(c);
+      if (!p) LOG(ERR) << "migration restore failed: " << p.error();
+      else LOG(INFO) << "migration restore succeeded, pid=" << (*p)->get_pid();
+    });
+  }
+}
+
+void MigrationServer(rt::TCPQueue &q) {
+  while (true) {
+    Status<rt::TCPConn> c = q.Accept();
+    if (!c) panic("couldn't accept a migration connection");
+    rt::Spawn([c = std::move(*c)] mutable {
+      Status<std::shared_ptr<Process>> p = RestoreProcessFromELFStream(c);
+      if (!p) LOG(ERR) << "migration restore failed: " << p.error();
+      else LOG(INFO) << "migration restore succeeded, pid=" << (*p)->get_pid();
+    });
+  }
+}
+
 void ControlServer(rt::TCPQueue &q) {
   while (true) {
     Status<rt::TCPConn> c = q.Accept();
@@ -353,8 +389,13 @@ Status<void> InitControlServer() {
   Status<rt::TCPQueue> q = rt::TCPQueue::Listen({0, GetCfg().port()}, 4096);
   if (!q) return MakeError(q);
   LOG(INFO) << "started control server on port " << GetCfg().port();
-
   rt::Spawn([q = std::move(*q)] mutable { ControlServer(q); });
+
+  uint16_t mig_port = GetCfg().port() + 1;
+  Status<rt::TCPQueue> mq = rt::TCPQueue::Listen({0, mig_port}, 4096);
+  if (!mq) return MakeError(mq);
+  LOG(INFO) << "started migration server on port " << mig_port;
+  rt::Spawn([mq = std::move(*mq)] mutable { MigrationServer(mq); });
 
   return {};
 }
