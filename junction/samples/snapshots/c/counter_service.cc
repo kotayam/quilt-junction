@@ -59,9 +59,6 @@ int main(int argc, char *argv[]) {
   fprintf(stdout, "counter_service listening on port %d\n", port);
   fflush(stdout);
 
-  // Signal readiness for snapshot.
-  kill(getpid(), SIGSTOP);
-
   while (1) {
     int fd = accept(srv, nullptr, nullptr);
     if (fd < 0) continue;
