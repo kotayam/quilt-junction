@@ -10,6 +10,7 @@ add_subdirectory(serverless)
 if(SNAPSHOT_SAMPLES)
   add_subdirectory(cereal)
   add_subdirectory(snapshots)
+  add_subdirectory(migration)
 endif()
 
 add_subdirectory(nbody)
