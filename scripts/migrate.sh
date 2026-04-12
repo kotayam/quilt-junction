@@ -32,10 +32,6 @@ case "$1" in
     service_port=$2
     sudo -E ${JUNCTION_RUN} ${SERVICE_CONFIG} --snapshot_enabled \
       -- ${COUNTER_SVC} ${service_port} &
-    sleep 2
-    for i in 1 2 3; do echo "INC" | nc -q1 ${SRC_IP} ${service_port}; done
-    echo "==> Counter state before migration:"
-    echo "GET" | nc -q1 ${SRC_IP} ${service_port}
     echo "==> Sender ready. Run the initiator to trigger migration."
     wait
     ;;
@@ -47,10 +43,16 @@ case "$1" in
 
   initiator)
     service_port=$2
+    echo "==> Incrementing counter on source (${SRC_IP}):"
+    for i in 1 2 3; do echo "INC" | nc -q1 ${SRC_IP} ${service_port}; done
+    echo "==> Counter state before migration:"
+    echo "GET" | nc -q1 ${SRC_IP} ${service_port}
     pid=$(${JUNCTION_CTL} ${SRC_IP} ps | tr -d '[], ' | head -1)
     echo "==> Migrating pid=${pid} from ${SRC_IP} to ${DST_IP}:44"
     ${JUNCTION_CTL} ${SRC_IP} migrate ${pid} ${DST_IP} 44
-    echo "==> Migration complete. Counter state on destination:"
+    echo "==> Verifying source is no longer serving (expect timeout/error):"
+    echo "GET" | nc -q1 -w2 ${SRC_IP} ${service_port} || echo "==> Source confirmed down."
+    echo "==> Counter state on destination:"
     sleep 1
     echo "GET" | nc -q1 ${DST_IP} ${service_port}
     ;;
