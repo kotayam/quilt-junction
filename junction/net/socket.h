@@ -235,3 +235,4 @@ class IPSocket : public Socket {
 }  // namespace junction
 
 CEREAL_REGISTER_TYPE(junction::Socket);
+CEREAL_REGISTER_POLYMORPHIC_RELATION(junction::File, junction::Socket);
