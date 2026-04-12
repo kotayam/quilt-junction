@@ -55,6 +55,10 @@ case "$1" in
     echo "==> Counter state on destination:"
     sleep 1
     echo "GET" | nc -q1 ${DST_IP} ${service_port}
+    echo "==> Incrementing counter on destination:"
+    for i in 1 2 3; do echo "INC" | nc -q1 ${DST_IP} ${service_port}; done
+    echo "==> Final counter state on destination:"
+    echo "GET" | nc -q1 ${DST_IP} ${service_port}
     ;;
 
   *)
