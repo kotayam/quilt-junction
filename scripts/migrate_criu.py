@@ -22,8 +22,8 @@ SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 ROOT_DIR = os.path.join(SCRIPT_DIR, "..")
 COUNTER_SVC = os.path.join(ROOT_DIR, "build", "junction", "samples", "migration", "counter_service")
 
-SRC_IP = "10.10.1.1"
-DST_IP = "10.10.1.2"
+SRC_IP = "127.0.0.1"  # sender and migrate run on the same node
+DST_IP = "10.10.1.2"  # host IP of receiver node
 DUMP_DIR = "/tmp/criu_dump"
 PAGE_SERVER_PORT = 9999
 
