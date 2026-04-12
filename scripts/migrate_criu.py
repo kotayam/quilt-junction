@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 """
-migrate_criu.py - Stop-and-copy migration benchmark using CRIU page-server.
-Streams the dump directly over TCP — comparable to Junction's migration.
+migrate_criu.py - Disk-less stop-and-copy migration benchmark using CRIU.
+Follows https://criu.org/Disk-less_migration
 
-Requires: sudo apt install -y criu
-Requires: counter_service binary built (scripts/build.sh)
+Memory pages are streamed directly to the destination page-server over TCP.
+Only small metadata images are copied via scp.
+
+Requires: criu built and installed (see README)
+Requires: passwordless ssh/scp from node-0 to node-1
 
 Usage:
+  Node 1 (receiver): scripts/migrate_criu.py receiver
   Node 0 (sender):   scripts/migrate_criu.py sender <service_port>
                      scripts/migrate_criu.py migrate <service_port>
-  Node 1 (receiver): scripts/migrate_criu.py receiver
 """
 
 import argparse
@@ -22,8 +25,7 @@ SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 ROOT_DIR = os.path.join(SCRIPT_DIR, "..")
 COUNTER_SVC = os.path.join(ROOT_DIR, "build", "junction", "samples", "migration", "counter_service")
 
-SRC_IP = "127.0.0.1"  # sender and migrate run on the same node
-DST_IP = "10.10.1.2"  # host IP of receiver node
+DST_IP = "10.10.1.2"
 DUMP_DIR = "/tmp/criu_dump"
 PAGE_SERVER_PORT = 9999
 
@@ -45,6 +47,18 @@ def wait_for_service(ip, port, timeout=30):
     raise TimeoutError(f"Service at {ip}:{port} did not come up within {timeout}s")
 
 
+def cmd_receiver():
+    subprocess.run(["sudo", "mkdir", "-p", DUMP_DIR], check=True)
+    subprocess.run(["sudo", "mount", "-t", "tmpfs", "none", DUMP_DIR], check=True)
+    print(f"==> Starting CRIU page-server on port {PAGE_SERVER_PORT} ...")
+    subprocess.run([
+        "sudo", "criu", "page-server",
+        "--images-dir", DUMP_DIR,
+        "--port", str(PAGE_SERVER_PORT),
+    ], check=True)
+    print("==> Page-server done. Waiting for metadata images from sender ...")
+
+
 def cmd_sender(port):
     print(f"==> Starting counter_service on port {port}")
     proc = subprocess.Popen([COUNTER_SVC, str(port)])
@@ -52,60 +66,66 @@ def cmd_sender(port):
     proc.wait()
 
 
-def cmd_receiver():
-    os.makedirs(DUMP_DIR, exist_ok=True)
-    print(f"==> Starting CRIU page-server on port {PAGE_SERVER_PORT} ...")
-    subprocess.run([
-        "sudo", "criu", "page-server",
-        "--port", str(PAGE_SERVER_PORT),
-        "-D", DUMP_DIR,
-    ], check=True)
-    print("==> Page-server done, restoring ...")
-    subprocess.run([
-        "sudo", "criu", "restore", "-D", DUMP_DIR, "--shell-job", "-d",
-    ], check=True)
-    print("==> Restore complete.")
-
-
 def cmd_migrate(port):
-    print(f"==> Incrementing counter on source ({SRC_IP}):")
+    print(f"==> Incrementing counter on source (localhost):")
     for _ in range(3):
-        print(send_cmd(SRC_IP, port, "INC"))
+        print(send_cmd("127.0.0.1", port, "INC"))
     print("==> Counter state before migration:")
-    print(send_cmd(SRC_IP, port, "GET"))
+    print(send_cmd("127.0.0.1", port, "GET"))
 
     pid = int(subprocess.check_output(["pgrep", "-f", "counter_service"])
               .decode().strip().splitlines()[0])
-    print(f"==> Dumping pid={pid}, streaming to {DST_IP}:{PAGE_SERVER_PORT}")
+    print(f"==> Dumping pid={pid}, streaming pages to {DST_IP}:{PAGE_SERVER_PORT}")
 
-    os.makedirs(DUMP_DIR, exist_ok=True)
+    subprocess.run(["sudo", "mkdir", "-p", DUMP_DIR], check=True)
+    subprocess.run(["sudo", "mount", "-t", "tmpfs", "none", DUMP_DIR],
+                   capture_output=True)  # ignore if already mounted
 
     t_start = time.monotonic()
+
+    # Dump: stream pages to dst page-server, leave process stopped
     subprocess.run([
         "sudo", "criu", "dump",
-        "-t", str(pid),
-        "-D", DUMP_DIR,
-        "--shell-job",
+        "--tree", str(pid),
+        "--images-dir", DUMP_DIR,
+        "--leave-stopped",
         "--page-server", "--address", DST_IP, "--port", str(PAGE_SERVER_PORT),
     ], check=True)
     t_src_down = time.monotonic()
 
+    # Measure metadata size (pages are already on dst)
     dump_size = sum(
         os.path.getsize(os.path.join(DUMP_DIR, f))
         for f in os.listdir(DUMP_DIR)
     )
 
-    print("==> Verifying source is no longer serving:")
-    try:
-        send_cmd(SRC_IP, port, "GET", timeout=2)
-        print("WARNING: source still responding!")
-    except OSError:
-        print("==> Source confirmed down.")
+    # Copy small metadata images to dst
+    print("==> Copying metadata images to destination ...")
+    subprocess.run([
+        "scp", "-r", f"{DUMP_DIR}/.", f"{DST_IP}:{DUMP_DIR}/"
+    ], check=True)
+
+    # Restore on dst
+    print("==> Restoring on destination ...")
+    subprocess.run([
+        "ssh", DST_IP,
+        f"sudo criu restore --images-dir {DUMP_DIR} --shell-job -d"
+    ], check=True)
 
     t_dst_up = wait_for_service(DST_IP, port)
 
+    # Kill stopped process on source
+    subprocess.run(["sudo", "kill", "-9", str(pid)], capture_output=True)
+
     downtime_ms = (t_dst_up - t_src_down) * 1000
     total_ms = (t_dst_up - t_start) * 1000
+
+    print("==> Verifying source is no longer serving:")
+    try:
+        send_cmd("127.0.0.1", port, "GET", timeout=2)
+        print("WARNING: source still responding!")
+    except OSError:
+        print("==> Source confirmed down.")
 
     print("==> Counter state on destination:")
     print(send_cmd(DST_IP, port, "GET"))
@@ -115,9 +135,13 @@ def cmd_migrate(port):
     print("==> Final counter state on destination:")
     print(send_cmd(DST_IP, port, "GET"))
 
-    print(f"\n==> Dump size:            {dump_size // 1024} KiB")
+    print(f"\n==> Metadata size:        {dump_size // 1024} KiB")
     print(f"==> Downtime:             {downtime_ms:.1f} ms")
     print(f"==> Total migration time: {total_ms:.1f} ms")
+
+    # Cleanup
+    subprocess.run(["sudo", "umount", DUMP_DIR], capture_output=True)
+    subprocess.run(["ssh", DST_IP, f"sudo umount {DUMP_DIR}"], capture_output=True)
 
 
 def main():
