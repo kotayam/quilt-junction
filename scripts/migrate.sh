@@ -47,9 +47,9 @@ case "$1" in
 
   initiator)
     service_port=$2
-    pid=$(sudo -E ${JUNCTION_RUN} ${SERVICE_CONFIG} -- ${JUNCTION_CTL} ${SRC_IP} ps | tr -d '[], ' | head -1)
+    pid=$(${JUNCTION_CTL} ${SRC_IP} ps | tr -d '[], ' | head -1)
     echo "==> Migrating pid=${pid} from ${SRC_IP} to ${DST_IP}:44"
-    sudo -E ${JUNCTION_RUN} ${SERVICE_CONFIG} -- ${JUNCTION_CTL} ${SRC_IP} migrate ${pid} ${DST_IP} 44
+    ${JUNCTION_CTL} ${SRC_IP} migrate ${pid} ${DST_IP} 44
     echo "==> Migration complete. Counter state on destination:"
     sleep 1
     echo "GET" | nc -q1 ${DST_IP} ${service_port}
