@@ -149,6 +149,12 @@ Status<void> WriteElfIovecs(MemoryMap &mm, SnapshotContext &ctx,
   elf_iovecs.insert(elf_iovecs.end(), iovs.begin(), iovs.end());
 
   if (Status<void> r = WritevFull(out, elf_iovecs); !r) return r;
+
+  size_t elf_bytes = 0;
+  for (const auto &iov : elf_iovecs) elf_bytes += iov.iov_len;
+  LOG(INFO) << "migration: ELF bytes transferred: " << elf_bytes << " ("
+            << (elf_bytes / 1024) << " KiB)";
+
   return RestoreVMAProtections(mm);
 }
 
@@ -216,6 +222,8 @@ Status<void> SnapshotProcToELFStream(Process *p, VectoredWriter &out) {
   if (Status<void> ret = WriteU64LE(out, metadata_buf.size()); !ret) return ret;
   iovec meta_iov = {metadata_buf.data(), metadata_buf.size()};
   if (Status<void> ret = WritevFull(out, {&meta_iov, 1}); !ret) return ret;
+  LOG(INFO) << "migration: metadata bytes transferred: " << metadata_buf.size()
+            << " (" << (metadata_buf.size() / 1024) << " KiB)";
 
   return SnapshotElfToStream(p->get_mem_map(), GetSnapshotContext(), out);
 }
