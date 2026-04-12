@@ -6,50 +6,57 @@
 # Usage:
 #   Node 1 (sender):    scripts/migrate.sh sender   <service_port>
 #   Node 2 (receiver):  scripts/migrate.sh receiver
-#   Node 3 (initiator): scripts/migrate.sh initiator <src_ip> <dest_ip> <service_port>
+#   Initiator:          scripts/migrate.sh initiator <service_port>
 
 set -e
+
+# Kill any leftover junction_run processes before starting
+sudo pkill -f junction_run 2>/dev/null || true
+sleep 1
 
 SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
 ROOT_DIR=${SCRIPT_DIR}/..
 BUILD_DIR=${ROOT_DIR}/build/junction
 JUNCTION_RUN=${BUILD_DIR}/junction_run
 JUNCTION_CTL=${ROOT_DIR}/build/junction-ctl/junction-ctl
-CONFIG=${BUILD_DIR}/caladan_test.config
-COUNTER_SVC=${BUILD_DIR}/samples/snapshots/c/counter_service
+MIGRATION_BUILD_DIR=${BUILD_DIR}/samples/migration
+SERVICE_CONFIG=${MIGRATION_BUILD_DIR}/caladan_service.config
+DST_CONFIG=${MIGRATION_BUILD_DIR}/caladan_migration_dst.config
+COUNTER_SVC=${MIGRATION_BUILD_DIR}/counter_service
+
+SRC_IP=10.10.1.1
+DST_IP=10.10.1.2
 
 case "$1" in
   sender)
     service_port=$2
-    sudo -E ${JUNCTION_RUN} ${CONFIG} --snapshot_enabled \
+    sudo -E ${JUNCTION_RUN} ${SERVICE_CONFIG} --snapshot_enabled \
       -- ${COUNTER_SVC} ${service_port} &
     sleep 2
-    for i in 1 2 3; do echo "INC" | nc -q1 localhost ${service_port}; done
+    for i in 1 2 3; do echo "INC" | nc -q1 ${SRC_IP} ${service_port}; done
     echo "==> Counter state before migration:"
-    echo "GET" | nc -q1 localhost ${service_port}
+    echo "GET" | nc -q1 ${SRC_IP} ${service_port}
     echo "==> Sender ready. Run the initiator to trigger migration."
     wait
     ;;
 
   receiver)
     echo "==> Migration server listening on port 44"
-    sudo -E ${JUNCTION_RUN} ${CONFIG} --snapshot_enabled
+    sudo -E ${JUNCTION_RUN} ${DST_CONFIG} --snapshot_enabled
     ;;
 
   initiator)
-    src_ip=$2
-    dest_ip=$3
-    service_port=$4
-    pid=$(${JUNCTION_CTL} ${src_ip} ps | tr -d '[], ' | head -1)
-    echo "==> Migrating pid=${pid} from ${src_ip} to ${dest_ip}:44"
-    ${JUNCTION_CTL} ${src_ip} migrate ${pid} ${dest_ip} 44
+    service_port=$2
+    pid=$(sudo -E ${JUNCTION_RUN} ${SERVICE_CONFIG} -- ${JUNCTION_CTL} ${SRC_IP} ps | tr -d '[], ' | head -1)
+    echo "==> Migrating pid=${pid} from ${SRC_IP} to ${DST_IP}:44"
+    sudo -E ${JUNCTION_RUN} ${SERVICE_CONFIG} -- ${JUNCTION_CTL} ${SRC_IP} migrate ${pid} ${DST_IP} 44
     echo "==> Migration complete. Counter state on destination:"
     sleep 1
-    echo "GET" | nc -q1 ${dest_ip} ${service_port}
+    echo "GET" | nc -q1 ${DST_IP} ${service_port}
     ;;
 
   *)
-    echo "usage: $0 {sender <service_port> | receiver | initiator <src_ip> <dest_ip> <service_port>}"
+    echo "usage: $0 {sender <service_port> | receiver | initiator <service_port>}"
     exit 1
     ;;
 esac
