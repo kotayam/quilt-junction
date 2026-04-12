@@ -190,13 +190,13 @@ Status<void> SnapshotProcToELF(Process *p, std::string_view metadata_path,
 Status<void> SnapshotProcToELFStream(Process *p, VectoredWriter &out) {
   LOG(INFO) << "snapshotting proc " << p->get_pid() << " to stream";
 
-  rt::RuntimeLibcGuard guard;
   StartSnapshotContext();
   auto f = finally([] { EndSnapshotContext(); });
 
   // Serialize metadata into a buffer so we can length-prefix it.
   std::vector<std::byte> metadata_buf;
   {
+    rt::RuntimeLibcGuard guard;
     struct VecWriter {
       std::vector<std::byte> &buf;
       Status<size_t> Write(std::span<const std::byte> src) {
