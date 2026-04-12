@@ -190,6 +190,7 @@ Status<void> SnapshotProcToELF(Process *p, std::string_view metadata_path,
 Status<void> SnapshotProcToELFStream(Process *p, VectoredWriter &out) {
   LOG(INFO) << "snapshotting proc " << p->get_pid() << " to stream";
 
+  rt::RuntimeLibcGuard guard;
   StartSnapshotContext();
   auto f = finally([] { EndSnapshotContext(); });
 
