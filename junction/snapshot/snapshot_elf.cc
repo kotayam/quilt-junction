@@ -293,8 +293,6 @@ Status<std::shared_ptr<Process>> RestoreProcessFromELF(
 // Stream format: [8-byte metadata length LE][metadata bytes][ELF bytes]
 Status<std::shared_ptr<Process>> RestoreProcessFromELFStream(
     VectoredReader &in) {
-  rt::RuntimeLibcGuard guard;
-
   // Read and dispatch on migration type.
   uint8_t migration_type = 0;
   iovec type_iov = {&migration_type, sizeof(migration_type)};
@@ -318,27 +316,31 @@ Status<std::shared_ptr<Process>> RestoreProcessFromELFStream(
     if (Status<void> ret = ReadvFull(in, {&iov, 1}); !ret) return MakeError(ret);
   }
 
-  // Deserialize metadata.
-  struct VecReader {
-    std::span<const std::byte> remaining;
-    Status<size_t> Read(std::span<std::byte> dst) {
-      size_t n = std::min(dst.size(), remaining.size());
-      std::copy_n(remaining.begin(), n, dst.begin());
-      remaining = remaining.subspan(n);
-      return n ? n : Status<size_t>(MakeError(EUNEXPECTEDEOF));
-    }
-  } vr{metadata_buf};
-  StreamBufferReader<VecReader> sbr(vr);
-  std::istream instream(&sbr);
-  cereal::BinaryInputArchive ar(instream);
-
-  if (Status<void> ret = FSRestore(ar); unlikely(!ret)) return MakeError(ret);
-  timings().restore_metadata_start = Time::Now();
-
+  // Deserialize metadata — guard scoped here only, network reads above/below
+  // can block and must not run with preemption disabled.
   std::shared_ptr<Process> p;
-  ar(p);
-  SerializeUnixSocketState(ar);
-  timings().restore_data_start = Time::Now();
+  {
+    rt::RuntimeLibcGuard guard;
+    struct VecReader {
+      std::span<const std::byte> remaining;
+      Status<size_t> Read(std::span<std::byte> dst) {
+        size_t n = std::min(dst.size(), remaining.size());
+        std::copy_n(remaining.begin(), n, dst.begin());
+        remaining = remaining.subspan(n);
+        return n ? n : Status<size_t>(MakeError(EUNEXPECTEDEOF));
+      }
+    } vr{metadata_buf};
+    StreamBufferReader<VecReader> sbr(vr);
+    std::istream instream(&sbr);
+    cereal::BinaryInputArchive ar(instream);
+
+    if (Status<void> ret = FSRestore(ar); unlikely(!ret)) return MakeError(ret);
+    timings().restore_metadata_start = Time::Now();
+
+    ar(p);
+    SerializeUnixSocketState(ar);
+    timings().restore_data_start = Time::Now();
+  }
 
   // Buffer the ELF data into a tmpfile so LoadELF can seek/mmap it.
   Status<KernelFile> tmp =
