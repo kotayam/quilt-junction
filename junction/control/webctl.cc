@@ -1,7 +1,7 @@
 #include <charconv>
 
-#include "junction/base/string.h"
 #include "junction/base/finally.h"
+#include "junction/base/string.h"
 #include "junction/bindings/log.h"
 #include "junction/bindings/net.h"
 #include "junction/bindings/thread.h"

@@ -10,13 +10,14 @@
 // After restore, the counter value is preserved.
 
 #include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <unistd.h>
+
 #include <csignal>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <unistd.h>
 
 static int counter = 0;
 

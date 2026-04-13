@@ -108,7 +108,7 @@ Status<std::pair<std::vector<elf_phdr>, std::vector<iovec>>> GetElfPHDRs(
 // Builds the ELF iovec list (header + phdrs + padding + data) and writes it
 // to the given writer, then restores VMA protections.
 Status<void> WriteElfIovecs(MemoryMap &mm, SnapshotContext &ctx,
-                             VectoredWriter &out) {
+                            VectoredWriter &out) {
   auto ret = GetElfPHDRs(mm, ctx);
   if (!ret) return MakeError(ret);
   auto &[pheaders, iovs] = *ret;
@@ -218,7 +218,10 @@ Status<void> SnapshotProcToELFStream(Process *p, VectoredWriter &out) {
     SerializeUnixSocketState(ar);
   }
 
-  if (Status<void> ret = WriteU8(out, static_cast<uint8_t>(MigrationType::kStopAndCopy)); !ret) return ret;
+  if (Status<void> ret =
+          WriteU8(out, static_cast<uint8_t>(MigrationType::kStopAndCopy));
+      !ret)
+    return ret;
   if (Status<void> ret = WriteU64LE(out, metadata_buf.size()); !ret) return ret;
   iovec meta_iov = {metadata_buf.data(), metadata_buf.size()};
   if (Status<void> ret = WritevFull(out, {&meta_iov, 1}); !ret) return ret;
@@ -304,7 +307,8 @@ Status<std::shared_ptr<Process>> RestoreProcessFromELFStream(
   // Read and dispatch on migration type.
   uint8_t migration_type = 0;
   iovec type_iov = {&migration_type, sizeof(migration_type)};
-  if (Status<void> ret = ReadvFull(in, {&type_iov, 1}); !ret) return MakeError(ret);
+  if (Status<void> ret = ReadvFull(in, {&type_iov, 1}); !ret)
+    return MakeError(ret);
   if (migration_type != static_cast<uint8_t>(MigrationType::kStopAndCopy)) {
     LOG(ERR) << "unsupported migration type: " << migration_type;
     return MakeError(EINVAL);
@@ -314,14 +318,16 @@ Status<std::shared_ptr<Process>> RestoreProcessFromELFStream(
   uint64_t metadata_len = 0;
   {
     iovec iov = {&metadata_len, sizeof(metadata_len)};
-    if (Status<void> ret = ReadvFull(in, {&iov, 1}); !ret) return MakeError(ret);
+    if (Status<void> ret = ReadvFull(in, {&iov, 1}); !ret)
+      return MakeError(ret);
   }
 
   // Read metadata into a buffer.
   std::vector<std::byte> metadata_buf(metadata_len);
   {
     iovec iov = {metadata_buf.data(), metadata_buf.size()};
-    if (Status<void> ret = ReadvFull(in, {&iov, 1}); !ret) return MakeError(ret);
+    if (Status<void> ret = ReadvFull(in, {&iov, 1}); !ret)
+      return MakeError(ret);
   }
 
   // Deserialize metadata — guard scoped here only, network reads above/below
@@ -368,9 +374,8 @@ Status<std::shared_ptr<Process>> RestoreProcessFromELFStream(
     }
   }
 
-  Status<JunctionFile> elf =
-      JunctionFile::Open(p->get_fs(), "/tmp/junction_migrate.elf", 0,
-                         FileMode::kRead);
+  Status<JunctionFile> elf = JunctionFile::Open(
+      p->get_fs(), "/tmp/junction_migrate.elf", 0, FileMode::kRead);
   if (unlikely(!elf)) return MakeError(elf);
 
   MemoryMap mm(nullptr, kMemoryMappingSize);
