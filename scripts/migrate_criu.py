@@ -61,7 +61,6 @@ def cmd_receiver():
         "sudo", "criu", "page-server",
         "--images-dir", DUMP_DIR,
         "--port", str(PAGE_SERVER_PORT),
-        "--verbose",
     ], check=True)
     print("==> Page-server done. Waiting for metadata images from sender ...")
 
