@@ -54,6 +54,7 @@ def run(cmd, **kwargs):
 
 
 def cmd_receiver():
+    subprocess.run(["sudo", "pkill", "-f", "counter_service"], capture_output=True)
     subprocess.run(["sudo", "mkdir", "-p", DUMP_DIR], check=True)
     subprocess.run(["sudo", "mount", "-t", "tmpfs", "none", DUMP_DIR], check=True)
     print(f"==> Starting CRIU page-server on port {PAGE_SERVER_PORT} ...")
