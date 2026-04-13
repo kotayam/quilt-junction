@@ -27,6 +27,7 @@ COUNTER_SVC = os.path.join(ROOT_DIR, "build", "junction", "samples", "migration"
 
 DST_IP = "10.10.1.2"       # Junction/Caladan subnet IP (service reachability)
 DST_SSH = "node-1"         # SSH alias for the destination host (see ~/.ssh/config)
+DUMP_DIR = "/tmp/criu_dump"
 PAGE_SERVER_PORT = 9999
 
 
