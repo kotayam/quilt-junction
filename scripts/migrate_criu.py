@@ -12,7 +12,7 @@ Requires: passwordless ssh/scp from node-0 to node-1
 Usage:
   Node 1 (receiver): scripts/migrate_criu.py receiver
   Node 0 (sender):   scripts/migrate_criu.py sender <service_port>
-                     scripts/migrate_criu.py migrate <service_port>
+                     scripts/migrate_criu.py migrate <service_port> [-v]
 """
 
 import argparse
@@ -54,8 +54,8 @@ def run(cmd, **kwargs):
 
 
 def cmd_receiver():
-    run(["sudo", "mkdir", "-p", DUMP_DIR], check=True)
-    run(["sudo", "mount", "-t", "tmpfs", "none", DUMP_DIR], check=True)
+    subprocess.run(["sudo", "mkdir", "-p", DUMP_DIR], check=True)
+    subprocess.run(["sudo", "mount", "-t", "tmpfs", "none", DUMP_DIR], check=True)
     print(f"==> Starting CRIU page-server on port {PAGE_SERVER_PORT} ...")
     run([
         "sudo", "criu", "page-server",
@@ -67,7 +67,6 @@ def cmd_receiver():
 
 def cmd_sender(port):
     print(f"==> Starting counter_service on port {port}")
-    # Redirect stdio to /dev/null so CRIU doesn't need to restore a tty on dst
     with open(os.devnull, 'r') as devnull_r, open(os.devnull, 'w') as devnull_w:
         proc = subprocess.Popen(
             ["setsid", COUNTER_SVC, str(port)],
@@ -77,7 +76,9 @@ def cmd_sender(port):
     proc.wait()
 
 
-def cmd_migrate(port):
+def cmd_migrate(port, verbose):
+    v = ["-v"] if verbose else []
+
     print(f"==> Incrementing counter on source (localhost):")
     for _ in range(3):
         print(send_cmd("127.0.0.1", port, "INC"))
@@ -90,38 +91,31 @@ def cmd_migrate(port):
 
     subprocess.run(["sudo", "mkdir", "-p", DUMP_DIR], check=True)
     subprocess.run(["sudo", "mount", "-t", "tmpfs", "none", DUMP_DIR],
-                   capture_output=True)  # ignore if already mounted
+                   capture_output=True)
 
     t_start = time.monotonic()
 
-    # Dump: stream pages to dst page-server, leave process stopped
     run([
         "sudo", "criu", "dump",
         "--tree", str(pid),
         "--images-dir", DUMP_DIR,
         "--leave-stopped",
         "--page-server", "--address", DST_IP, "--port", str(PAGE_SERVER_PORT),
-        "-v",
-    ], check=True)
+    ] + v, check=True)
     t_src_down = time.monotonic()
 
-    # Measure metadata size (pages are already on dst)
+    # Measure metadata size (pages already on dst)
     dump_size = sum(
         os.path.getsize(os.path.join(DUMP_DIR, f))
         for f in os.listdir(DUMP_DIR)
     )
 
-    # Read page stats from stats-dump image
-    stats_file = os.path.join(DUMP_DIR, "stats-dump")
-    pages_written = None
-    if os.path.exists(stats_file):
-        result = subprocess.run(
-            ["sudo", "criu", "decode", "-i", stats_file],
-            capture_output=True, text=True
-        )
-        for line in result.stdout.splitlines():
-            if "pages_written" in line:
-                pages_written = int(line.split(":")[1].strip())
+    # Count pages transferred from pagemap images
+    pages_written = sum(
+        os.path.getsize(os.path.join(DUMP_DIR, f)) // 16
+        for f in os.listdir(DUMP_DIR)
+        if f.startswith("pagemap-") and f.endswith(".img")
+    )
 
     # Copy small metadata images to dst
     print("==> Copying metadata images to destination ...")
@@ -131,7 +125,7 @@ def cmd_migrate(port):
     print("==> Restoring on destination ...")
     run([
         "ssh", DST_SSH,
-        f"sudo setsid criu restore --images-dir {DUMP_DIR} -d -v"
+        f"sudo setsid criu restore --images-dir {DUMP_DIR} -d {' '.join(v)}"
     ], check=True)
 
     t_dst_up = wait_for_service(DST_IP, port)
@@ -158,8 +152,7 @@ def cmd_migrate(port):
     print(send_cmd(DST_IP, port, "GET"))
 
     print(f"\n==> Metadata size:        {dump_size // 1024} KiB")
-    if pages_written is not None:
-        print(f"==> Pages transferred:    {pages_written} ({pages_written * 4} KiB)")
+    print(f"==> Pages transferred:    {pages_written} ({pages_written * 4} KiB)")
     print(f"==> Downtime:             {downtime_ms:.1f} ms")
     print(f"==> Total migration time: {total_ms:.1f} ms")
 
@@ -174,7 +167,9 @@ def main():
     sub = parser.add_subparsers(dest="role", required=True)
     sub.add_parser("sender").add_argument("port", type=int)
     sub.add_parser("receiver")
-    sub.add_parser("migrate").add_argument("port", type=int)
+    p = sub.add_parser("migrate")
+    p.add_argument("port", type=int)
+    p.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args()
 
     if args.role == "sender":
@@ -182,7 +177,7 @@ def main():
     elif args.role == "receiver":
         cmd_receiver()
     elif args.role == "migrate":
-        cmd_migrate(args.port)
+        cmd_migrate(args.port, args.verbose)
 
 
 if __name__ == "__main__":
