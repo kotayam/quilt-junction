@@ -25,7 +25,7 @@ SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 ROOT_DIR = os.path.join(SCRIPT_DIR, "..")
 COUNTER_SVC = os.path.join(ROOT_DIR, "build", "junction", "samples", "migration", "counter_service")
 
-DST_IP = "10.10.1.2"       # Junction/Caladan subnet IP (service reachability)
+DST_IP = "128.105.146.85"  # host IP of node-1 (page-server + service reachability)
 DST_SSH = "node-1"         # SSH alias for the destination host (see ~/.ssh/config)
 DUMP_DIR = "/tmp/criu_dump"
 PAGE_SERVER_PORT = 9999
