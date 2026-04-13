@@ -62,7 +62,12 @@ def cmd_receiver():
         "--images-dir", DUMP_DIR,
         "--port", str(PAGE_SERVER_PORT),
     ], check=True)
-    print("==> Page-server done. Waiting for metadata images from sender ...")
+    print("==> Page-server done. Waiting for metadata images and restore ...")
+    # Poll until counter_service is running (restored by migrate)
+    while subprocess.run(["pgrep", "-f", "counter_service"],
+                         capture_output=True).returncode != 0:
+        time.sleep(0.1)
+    print("==> Restore complete. counter_service is running.")
 
 
 def cmd_sender(port):
