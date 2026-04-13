@@ -15,7 +15,7 @@ preserved across migration to a new node.
 ## Stop-and-Copy Migration Test
 
 This test migrates `counter_service` from one Junction instance to another using
-`scripts/migrate.sh`. It requires three roles, each run from a separate node (or terminal).
+`scripts/migrate.py`. It requires three roles, each run from a separate node (or terminal).
 
 ### Prerequisites
 
@@ -29,7 +29,7 @@ This test migrates `counter_service` from one Junction instance to another using
 ### Step 1 — Start the sender (node-0)
 
 ```shell
-scripts/migrate.sh sender 8080
+scripts/migrate.py sender 8080
 ```
 
 Wait for `Sender ready.` to appear before proceeding.
@@ -37,13 +37,13 @@ Wait for `Sender ready.` to appear before proceeding.
 ### Step 2 — Start the receiver (node-1)
 
 ```shell
-scripts/migrate.sh receiver
+scripts/migrate.py receiver
 ```
 
 ### Step 3 — Trigger migration (initiator node)
 
 ```shell
-scripts/migrate.sh initiator 8080
+scripts/migrate.py initiator 8080
 ```
 
 The initiator will:
