@@ -95,6 +95,7 @@ def cmd_migrate(port):
         "--tree", str(pid),
         "--images-dir", DUMP_DIR,
         "--leave-stopped",
+        "--shell-job",
         "--page-server", "--address", DST_IP, "--port", str(PAGE_SERVER_PORT),
         "-v",
     ], check=True)
