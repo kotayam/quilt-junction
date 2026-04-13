@@ -79,7 +79,11 @@ def cmd_sender(port):
             stdin=devnull_r, stdout=devnull_w, stderr=devnull_w
         )
     print(f"==> PID: {proc.pid}. Run 'migrate {port}' on this node to trigger migration.")
-    proc.wait()
+    try:
+        proc.wait()
+    except KeyboardInterrupt:
+        proc.kill()
+        print("\n==> Sender stopped.")
 
 
 def cmd_migrate(port, verbose):
