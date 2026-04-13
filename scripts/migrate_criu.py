@@ -25,8 +25,8 @@ SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 ROOT_DIR = os.path.join(SCRIPT_DIR, "..")
 COUNTER_SVC = os.path.join(ROOT_DIR, "build", "junction", "samples", "migration", "counter_service")
 
-DST_IP = "10.10.1.2"
-DUMP_DIR = "/tmp/criu_dump"
+DST_IP = "10.10.1.2"       # Junction/Caladan subnet IP (service reachability)
+DST_SSH = "node-1"         # SSH alias for the destination host (see ~/.ssh/config)
 PAGE_SERVER_PORT = 9999
 
 
@@ -102,13 +102,13 @@ def cmd_migrate(port):
     # Copy small metadata images to dst
     print("==> Copying metadata images to destination ...")
     subprocess.run([
-        "scp", "-r", f"{DUMP_DIR}/.", f"{DST_IP}:{DUMP_DIR}/"
+        "scp", "-r", f"{DUMP_DIR}/.", f"{DST_SSH}:{DUMP_DIR}/"
     ], check=True)
 
     # Restore on dst
     print("==> Restoring on destination ...")
     subprocess.run([
-        "ssh", DST_IP,
+        "ssh", DST_SSH,
         f"sudo criu restore --images-dir {DUMP_DIR} --shell-job -d"
     ], check=True)
 
@@ -141,7 +141,7 @@ def cmd_migrate(port):
 
     # Cleanup
     subprocess.run(["sudo", "umount", DUMP_DIR], capture_output=True)
-    subprocess.run(["ssh", DST_IP, f"sudo umount {DUMP_DIR}"], capture_output=True)
+    subprocess.run(["ssh", DST_SSH, f"sudo umount {DUMP_DIR}"], capture_output=True)
 
 
 def main():
