@@ -67,7 +67,12 @@ def cmd_receiver():
 
 def cmd_sender(port):
     print(f"==> Starting counter_service on port {port}")
-    proc = subprocess.Popen([COUNTER_SVC, str(port)])
+    # Redirect stdio to /dev/null so CRIU doesn't need to restore a tty on dst
+    with open(os.devnull, 'r') as devnull_r, open(os.devnull, 'w') as devnull_w:
+        proc = subprocess.Popen(
+            [COUNTER_SVC, str(port)],
+            stdin=devnull_r, stdout=devnull_w, stderr=devnull_w
+        )
     print(f"==> PID: {proc.pid}. Run 'migrate {port}' on this node to trigger migration.")
     proc.wait()
 
@@ -95,7 +100,6 @@ def cmd_migrate(port):
         "--tree", str(pid),
         "--images-dir", DUMP_DIR,
         "--leave-stopped",
-        "--shell-job",
         "--page-server", "--address", DST_IP, "--port", str(PAGE_SERVER_PORT),
         "-v",
     ], check=True)
@@ -115,7 +119,7 @@ def cmd_migrate(port):
     print("==> Restoring on destination ...")
     run([
         "ssh", DST_SSH,
-        f"sudo setsid criu restore --images-dir {DUMP_DIR} --shell-job -d -v"
+        f"sudo setsid criu restore --images-dir {DUMP_DIR} -d -v"
     ], check=True)
 
     t_dst_up = wait_for_service(DST_IP, port)
