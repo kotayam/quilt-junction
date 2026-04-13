@@ -48,14 +48,20 @@ def wait_for_service(ip, port, timeout=30):
     raise TimeoutError(f"Service at {ip}:{port} did not come up within {timeout}s")
 
 
+def run(cmd, **kwargs):
+    print(f"==> Running: {' '.join(cmd)}")
+    return subprocess.run(cmd, **kwargs)
+
+
 def cmd_receiver():
-    subprocess.run(["sudo", "mkdir", "-p", DUMP_DIR], check=True)
-    subprocess.run(["sudo", "mount", "-t", "tmpfs", "none", DUMP_DIR], check=True)
+    run(["sudo", "mkdir", "-p", DUMP_DIR], check=True)
+    run(["sudo", "mount", "-t", "tmpfs", "none", DUMP_DIR], check=True)
     print(f"==> Starting CRIU page-server on port {PAGE_SERVER_PORT} ...")
-    subprocess.run([
+    run([
         "sudo", "criu", "page-server",
         "--images-dir", DUMP_DIR,
         "--port", str(PAGE_SERVER_PORT),
+        "--verbose",
     ], check=True)
     print("==> Page-server done. Waiting for metadata images from sender ...")
 
@@ -85,12 +91,13 @@ def cmd_migrate(port):
     t_start = time.monotonic()
 
     # Dump: stream pages to dst page-server, leave process stopped
-    subprocess.run([
+    run([
         "sudo", "criu", "dump",
         "--tree", str(pid),
         "--images-dir", DUMP_DIR,
         "--leave-stopped",
         "--page-server", "--address", DST_IP, "--port", str(PAGE_SERVER_PORT),
+        "--verbose",
     ], check=True)
     t_src_down = time.monotonic()
 
@@ -102,15 +109,13 @@ def cmd_migrate(port):
 
     # Copy small metadata images to dst
     print("==> Copying metadata images to destination ...")
-    subprocess.run([
-        "scp", "-r", f"{DUMP_DIR}/.", f"{DST_SSH}:{DUMP_DIR}/"
-    ], check=True)
+    run(["scp", "-r", f"{DUMP_DIR}/.", f"{DST_SSH}:{DUMP_DIR}/"], check=True)
 
     # Restore on dst
     print("==> Restoring on destination ...")
-    subprocess.run([
+    run([
         "ssh", DST_SSH,
-        f"sudo criu restore --images-dir {DUMP_DIR} --shell-job -d"
+        f"sudo criu restore --images-dir {DUMP_DIR} --shell-job -d --verbose"
     ], check=True)
 
     t_dst_up = wait_for_service(DST_IP, port)
