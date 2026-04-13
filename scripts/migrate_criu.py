@@ -111,6 +111,18 @@ def cmd_migrate(port):
         for f in os.listdir(DUMP_DIR)
     )
 
+    # Read page stats from stats-dump image
+    stats_file = os.path.join(DUMP_DIR, "stats-dump")
+    pages_written = None
+    if os.path.exists(stats_file):
+        result = subprocess.run(
+            ["sudo", "criu", "decode", "-i", stats_file],
+            capture_output=True, text=True
+        )
+        for line in result.stdout.splitlines():
+            if "pages_written" in line:
+                pages_written = int(line.split(":")[1].strip())
+
     # Copy small metadata images to dst
     print("==> Copying metadata images to destination ...")
     run(["scp", "-r", f"{DUMP_DIR}/.", f"{DST_SSH}:{DUMP_DIR}/"], check=True)
@@ -146,6 +158,8 @@ def cmd_migrate(port):
     print(send_cmd(DST_IP, port, "GET"))
 
     print(f"\n==> Metadata size:        {dump_size // 1024} KiB")
+    if pages_written is not None:
+        print(f"==> Pages transferred:    {pages_written} ({pages_written * 4} KiB)")
     print(f"==> Downtime:             {downtime_ms:.1f} ms")
     print(f"==> Total migration time: {total_ms:.1f} ms")
 
