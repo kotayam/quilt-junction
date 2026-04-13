@@ -96,7 +96,7 @@ def cmd_migrate(port):
         "--images-dir", DUMP_DIR,
         "--leave-stopped",
         "--page-server", "--address", DST_IP, "--port", str(PAGE_SERVER_PORT),
-        "--verbose",
+        "-v",
     ], check=True)
     t_src_down = time.monotonic()
 
@@ -114,7 +114,7 @@ def cmd_migrate(port):
     print("==> Restoring on destination ...")
     run([
         "ssh", DST_SSH,
-        f"sudo criu restore --images-dir {DUMP_DIR} --shell-job -d --verbose"
+        f"sudo criu restore --images-dir {DUMP_DIR} --shell-job -d -v"
     ], check=True)
 
     t_dst_up = wait_for_service(DST_IP, port)
