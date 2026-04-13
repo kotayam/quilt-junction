@@ -110,12 +110,13 @@ def cmd_migrate(port, verbose):
         for f in os.listdir(DUMP_DIR)
     )
 
-    # Count pages transferred from pagemap images
-    pages_written = sum(
-        os.path.getsize(os.path.join(DUMP_DIR, f)) // 16
-        for f in os.listdir(DUMP_DIR)
-        if f.startswith("pagemap-") and f.endswith(".img")
+    # Count pages transferred — pagemap is on dst since pages were streamed there
+    result = subprocess.run(
+        ["ssh", DST_SSH, f"stat -c %s {DUMP_DIR}/pages-*.img 2>/dev/null || echo 0"],
+        capture_output=True, text=True
     )
+    pages_bytes = sum(int(x) for x in result.stdout.split() if x.isdigit())
+    pages_written = pages_bytes // 4096
 
     # Copy small metadata images to dst
     print("==> Copying metadata images to destination ...")
