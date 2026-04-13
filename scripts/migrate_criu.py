@@ -70,7 +70,7 @@ def cmd_sender(port):
     # Redirect stdio to /dev/null so CRIU doesn't need to restore a tty on dst
     with open(os.devnull, 'r') as devnull_r, open(os.devnull, 'w') as devnull_w:
         proc = subprocess.Popen(
-            [COUNTER_SVC, str(port)],
+            ["setsid", COUNTER_SVC, str(port)],
             stdin=devnull_r, stdout=devnull_w, stderr=devnull_w
         )
     print(f"==> PID: {proc.pid}. Run 'migrate {port}' on this node to trigger migration.")
