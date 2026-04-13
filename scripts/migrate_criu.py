@@ -115,7 +115,7 @@ def cmd_migrate(port):
     print("==> Restoring on destination ...")
     run([
         "ssh", DST_SSH,
-        f"sudo criu restore --images-dir {DUMP_DIR} --shell-job -d -v"
+        f"sudo setsid criu restore --images-dir {DUMP_DIR} --shell-job -d -v"
     ], check=True)
 
     t_dst_up = wait_for_service(DST_IP, port)
