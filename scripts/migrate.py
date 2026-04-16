@@ -56,13 +56,16 @@ def kill_leftover():
     time.sleep(1)
 
 
-def cmd_sender(port):
+def cmd_sender(port, skip_file_pages):
     kill_leftover()
     print(f"==> Starting counter_service on {SRC_IP}:{port}")
-    subprocess.run([
+    cmd = [
         "sudo", "-E", JUNCTION_RUN, SERVICE_CONFIG, "--snapshot_enabled",
-        "--", COUNTER_SVC, str(port)
-    ])
+    ]
+    if skip_file_pages:
+        cmd.append("--skip_file_pages")
+    cmd += ["--", COUNTER_SVC, str(port)]
+    subprocess.run(cmd)
 
 
 def cmd_receiver():
@@ -129,13 +132,15 @@ def main():
     sub = parser.add_subparsers(dest="role", required=True)
     s = sub.add_parser("sender")
     s.add_argument("port", type=int)
+    s.add_argument("--skip-file-pages", action="store_true",
+                   help="skip file-backed read-only pages during migration")
     sub.add_parser("receiver")
     i = sub.add_parser("initiator")
     i.add_argument("port", type=int)
     args = parser.parse_args()
 
     if args.role == "sender":
-        cmd_sender(args.port)
+        cmd_sender(args.port, getattr(args, "skip_file_pages", False))
     elif args.role == "receiver":
         cmd_receiver()
     elif args.role == "initiator":
