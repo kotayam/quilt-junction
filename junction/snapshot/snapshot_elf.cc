@@ -75,6 +75,11 @@ GetElfPHDRs(MemoryMap &mm, SnapshotContext &ctx) {
             .memsz = vma.Length(),
             .align = kPageSize,
         };
+        LOG(INFO) << "migration sender: FileRef PHDR path=" << path_strs.back()
+                  << " vaddr=0x" << std::hex << phdr.vaddr
+                  << " offset=0x" << phdr.offset
+                  << " filesz=" << std::dec << phdr.filesz
+                  << " memsz=" << phdr.memsz;
         phdrs.push_back(phdr);
         offset += pathsz;
         iovs.emplace_back(const_cast<char *>(path_strs.back().c_str()), pathsz);

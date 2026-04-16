@@ -261,7 +261,8 @@ bool HandlePS(ControlConn &c, const ctl_schema::PSRequest *req) {
 }
 bool HandleMigrateStopAndCopy(ControlConn &c,
                               const ctl_schema::MigrateRequest *req) {
-  LOG(INFO) << "handling stop-and-copy migration for pid " << req->pid();
+  LOG(INFO) << "handling stop-and-copy migration for pid " << req->pid()
+            << " (skip_file_pages=" << GetCfg().skip_file_pages() << ")";
   Time t0 = Time::Now();
 
   std::shared_ptr<Process> p = Process::Find(req->pid());

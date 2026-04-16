@@ -72,8 +72,11 @@ Status<std::vector<elf_phdr>> ReadPHDRs(JunctionFile &f,
         (phdr.align > 1 && (!std::has_single_bit(phdr.align) ||
                             (phdr.vaddr & (phdr.align - 1)) !=
                                 (phdr.offset & (phdr.align - 1))))) {
-      LOG(ERR) << "elf: encountered an invalid PHDR. " << phdr.align << " "
-               << phdr.vaddr << " " << phdr.offset;
+      LOG(ERR) << "elf: encountered an invalid PHDR. type=" << phdr.type
+               << " align=" << phdr.align
+               << " vaddr=0x" << std::hex << phdr.vaddr
+               << " offset=0x" << phdr.offset << std::dec
+               << " filesz=" << phdr.filesz << " memsz=" << phdr.memsz;
       return MakeError(EINVAL);
     }
   }
@@ -272,15 +275,24 @@ Status<elf_data> DoELFLoad(MemoryMap &mm, JunctionFile &file, FSRoot &fs,
     file.Seek(p.offset);
     if (Status<void> r = ReadFull(file, std::as_writable_bytes(std::span(path))); !r)
       return MakeError(r);
+    LOG(INFO) << "elf: FileRef restore path=" << path
+              << " vaddr=0x" << std::hex << p.vaddr
+              << " memsz=" << std::dec << p.memsz
+              << " file_offset=0x" << std::hex << p.paddr << std::dec;
     Status<JunctionFile> ref = JunctionFile::Open(fs, path, 0, FileMode::kRead);
-    if (!ref) return MakeError(ref);
+    if (!ref) {
+      LOG(ERR) << "elf: FileRef failed to open " << path << ": " << ref.error();
+      return MakeError(ref);
+    }
     unsigned int prot = 0;
     if (p.flags & kFlagExec) prot |= PROT_EXEC;
     if (p.flags & kFlagRead) prot |= PROT_READ;
     if (Status<void> r = ref->MMapFixed(mm, reinterpret_cast<void *>(p.vaddr),
                                         p.memsz, prot, MAP_DENYWRITE,
-                                        static_cast<off_t>(p.paddr)); !r)
+                                        static_cast<off_t>(p.paddr)); !r) {
+      LOG(ERR) << "elf: FileRef MMapFixed failed for " << path << ": " << r.error();
       return MakeError(r);
+    }
   }
 
   // Look for a PHDR table segment
