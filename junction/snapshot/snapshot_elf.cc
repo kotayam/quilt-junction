@@ -11,6 +11,7 @@ extern "C" {
 #include "junction/base/error.h"
 #include "junction/base/finally.h"
 #include "junction/fs/file.h"
+#include "junction/fs/fs.h"
 #include "junction/fs/junction_file.h"
 #include "junction/fs/memfs/memfs.h"
 #include "junction/kernel/elf.h"
@@ -36,11 +37,12 @@ Status<void> WriteU8(VectoredWriter &w, uint8_t v) {
   return WritevFull(w, {&iov, 1});
 }
 
-Status<std::pair<std::vector<elf_phdr>, std::vector<iovec>>> GetElfPHDRs(
-    MemoryMap &mm, SnapshotContext &ctx) {
+Status<std::tuple<std::vector<elf_phdr>, std::vector<iovec>, std::vector<std::string>>>
+GetElfPHDRs(MemoryMap &mm, SnapshotContext &ctx) {
   const std::vector<VMArea> vmas = mm.get_vmas();
   std::vector<elf_phdr> phdrs;
   std::vector<iovec> iovs;
+  std::vector<std::string> path_strs;  // keeps path data alive for iovs
   size_t total_sections = vmas.size() + ctx.mem_areas_.size();
   phdrs.reserve(total_sections);
   iovs.reserve(total_sections);
@@ -52,6 +54,34 @@ Status<std::pair<std::vector<elf_phdr>, std::vector<iovec>>> GetElfPHDRs(
     if (vma.prot & PROT_EXEC) flags |= kFlagExec;
     if (vma.prot & PROT_WRITE) flags |= kFlagWrite;
     if (vma.prot & PROT_READ) flags |= kFlagRead;
+
+    // Optimization: for read-only file-backed VMAs, record the file path so
+    // the receiver can re-map the file at the same address instead of
+    // transferring the page data.
+    if (GetCfg().skip_file_pages() && vma.type == VMType::kFile &&
+        !(vma.prot & PROT_WRITE)) {
+      Status<std::string> path =
+          vma.file->get_dent_ref().GetPathStr(FSRoot::GetGlobalRoot());
+      if (path) {
+        size_t pathsz = path->size() + 1;  // include null terminator
+        path_strs.push_back(std::move(*path));
+        elf_phdr phdr = {
+            .type = kPTypeFileRef,
+            .flags = flags,
+            .offset = offset,
+            .vaddr = vma.start,
+            .paddr = static_cast<uint64_t>(vma.offset),  // file offset
+            .filesz = pathsz,
+            .memsz = vma.Length(),
+            .align = kPageSize,
+        };
+        phdrs.push_back(phdr);
+        offset += pathsz;
+        iovs.emplace_back(const_cast<char *>(path_strs.back().c_str()), pathsz);
+        continue;
+      }
+      // Fall through to normal handling if path lookup fails.
+    }
 
     size_t filesz = vma.DataLength();
 
@@ -102,7 +132,7 @@ Status<std::pair<std::vector<elf_phdr>, std::vector<iovec>>> GetElfPHDRs(
     if (saved_area) iovs.emplace_back(area.ptr, saved_area);
   }
 
-  return std::make_pair(phdrs, iovs);
+  return std::make_tuple(std::move(phdrs), std::move(iovs), std::move(path_strs));
 }
 
 // Builds the ELF iovec list (header + phdrs + padding + data) and writes it
@@ -111,7 +141,7 @@ Status<void> WriteElfIovecs(MemoryMap &mm, SnapshotContext &ctx,
                             VectoredWriter &out) {
   auto ret = GetElfPHDRs(mm, ctx);
   if (!ret) return MakeError(ret);
-  auto &[pheaders, iovs] = *ret;
+  auto &[pheaders, iovs, path_strs] = *ret;
 
   elf_header hdr;
   memset(&hdr, 0, sizeof(elf_header));
