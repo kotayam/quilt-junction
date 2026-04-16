@@ -260,6 +260,25 @@ Status<elf_data> DoELFLoad(MemoryMap &mm, JunctionFile &file, FSRoot &fs,
   Status<std::pair<uintptr_t, size_t>> ret =
       LoadSegments(mm, file, *phdrs, reloc);
   if (!ret) return MakeError(ret);
+
+  // Re-map file-backed read-only regions from their original files.
+  for (const elf_phdr &p : *phdrs) {
+    if (p.type != kPTypeFileRef) continue;
+    std::string path(p.filesz - 1, '\0');  // filesz includes null terminator
+    file.Seek(p.offset);
+    if (Status<void> r = ReadFull(file, std::as_writable_bytes(std::span(path))); !r)
+      return MakeError(r);
+    Status<JunctionFile> ref = JunctionFile::Open(fs, path, 0, FileMode::kRead);
+    if (!ref) return MakeError(ref);
+    unsigned int prot = 0;
+    if (p.flags & kFlagExec) prot |= PROT_EXEC;
+    if (p.flags & kFlagRead) prot |= PROT_READ;
+    if (Status<void> r = ref->MMapFixed(mm, reinterpret_cast<void *>(p.vaddr),
+                                        p.memsz, prot, MAP_DENYWRITE,
+                                        static_cast<off_t>(p.paddr)); !r)
+      return MakeError(r);
+  }
+
   // Look for a PHDR table segment
   uintptr_t phdr_va = 0;
   phdr = FindPHDRByType(*phdrs, kPTypeSelf);
