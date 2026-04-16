@@ -420,6 +420,7 @@ void MemoryMap::Modify(uintptr_t start, uintptr_t end, int prot) {
   vmareas_.Modify(
       start, end, [&](const VMArea &vma) { return vma.prot != prot; },
       [&](VMArea &vma) {
+        if (prot & PROT_WRITE) vma.ever_writable = true;
         if (unlikely(TraceEnabled()))
           TracerModifyProt(vma, prot);
         else

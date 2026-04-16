@@ -65,7 +65,7 @@ GetElfPHDRs(MemoryMap &mm, SnapshotContext &ctx) {
     // the receiver can re-map the file at the same address instead of
     // transferring the page data.
     if (GetCfg().skip_file_pages() && vma.type == VMType::kFile &&
-        !(vma.prot & PROT_WRITE)) {
+        !(vma.prot & PROT_WRITE) && !vma.ever_writable) {
       Status<std::string> path =
           vma.file->get_dent_ref().GetPathStr(FSRoot::GetGlobalRoot());
       if (path) {
