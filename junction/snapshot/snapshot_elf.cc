@@ -49,6 +49,12 @@ GetElfPHDRs(MemoryMap &mm, SnapshotContext &ctx) {
   uint64_t offset = total_sections * sizeof(elf_phdr) + sizeof(elf_header);
   offset = PageAlign(offset);
 
+  // Collect kPTypeFileRef entries separately so they are appended after all
+  // kPTypeLoad PHDRs. This keeps offset page-aligned for load segments; the
+  // unaligned path-string sizes only affect the trailing FileRef block.
+  std::vector<elf_phdr> fileref_phdrs;
+  std::vector<iovec> fileref_iovs;
+
   for (const VMArea &vma : vmas) {
     uint32_t flags = 0;
     if (vma.prot & PROT_EXEC) flags |= kFlagExec;
@@ -65,24 +71,19 @@ GetElfPHDRs(MemoryMap &mm, SnapshotContext &ctx) {
       if (path) {
         size_t pathsz = path->size() + 1;  // include null terminator
         path_strs.push_back(std::move(*path));
+        // offset is filled in below after all kPTypeLoad offsets are known.
         elf_phdr phdr = {
             .type = kPTypeFileRef,
             .flags = flags,
-            .offset = offset,
+            .offset = 0,  // filled in after load segments
             .vaddr = vma.start,
             .paddr = static_cast<uint64_t>(vma.offset),  // file offset
             .filesz = pathsz,
             .memsz = vma.Length(),
-            .align = kPageSize,
+            .align = 1,  // path string; offset/vaddr alignment is irrelevant
         };
-        LOG(INFO) << "migration sender: FileRef PHDR path=" << path_strs.back()
-                  << " vaddr=0x" << std::hex << phdr.vaddr
-                  << " offset=0x" << phdr.offset
-                  << " filesz=" << std::dec << phdr.filesz
-                  << " memsz=" << phdr.memsz;
-        phdrs.push_back(phdr);
-        offset += pathsz;
-        iovs.emplace_back(const_cast<char *>(path_strs.back().c_str()), pathsz);
+        fileref_phdrs.push_back(phdr);
+        fileref_iovs.emplace_back(const_cast<char *>(path_strs.back().c_str()), pathsz);
         continue;
       }
       // Fall through to normal handling if path lookup fails.
@@ -135,6 +136,21 @@ GetElfPHDRs(MemoryMap &mm, SnapshotContext &ctx) {
     phdrs.push_back(phdr);
     offset += saved_area;
     if (saved_area) iovs.emplace_back(area.ptr, saved_area);
+  }
+
+  // Now assign offsets to FileRef PHDRs and append them.
+  for (size_t i = 0; i < fileref_phdrs.size(); i++) {
+    fileref_phdrs[i].offset = offset;
+    LOG(INFO) << "migration sender: FileRef PHDR path="
+              << std::string_view(static_cast<const char *>(fileref_iovs[i].iov_base),
+                                  fileref_phdrs[i].filesz - 1)
+              << " vaddr=0x" << std::hex << fileref_phdrs[i].vaddr
+              << " offset=0x" << fileref_phdrs[i].offset
+              << " filesz=" << std::dec << fileref_phdrs[i].filesz
+              << " memsz=" << fileref_phdrs[i].memsz;
+    offset += fileref_phdrs[i].filesz;
+    phdrs.push_back(fileref_phdrs[i]);
+    iovs.push_back(fileref_iovs[i]);
   }
 
   return std::make_tuple(std::move(phdrs), std::move(iovs), std::move(path_strs));
