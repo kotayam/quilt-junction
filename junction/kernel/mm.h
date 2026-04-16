@@ -41,14 +41,12 @@ struct VMArea {
       : start(reinterpret_cast<uintptr_t>(addr)),
         end(start + len),
         prot(prot),
-        ever_writable(prot & PROT_WRITE),
         type(type) {}
   VMArea(void *addr, size_t len, int prot, std::shared_ptr<File> file,
          off_t offset)
       : start(reinterpret_cast<uintptr_t>(addr)),
         end(start + len),
         prot(prot),
-        ever_writable(prot & PROT_WRITE),
         type(VMType::kFile),
         file(std::move(file)),
         offset(offset) {}
@@ -95,16 +93,13 @@ struct VMArea {
   uintptr_t end;
   int prot;
   bool traced : 1 {false};
-  bool ever_writable : 1 {false};  // true if this VMA was ever mapped writable
   VMType type;
   std::shared_ptr<File> file;
   off_t offset;
 
   template <class Archive>
   void serialize(Archive &ar) {
-    bool ew = ever_writable;
-    ar(start, end, prot, ew, type, file, offset);
-    ever_writable = ew;
+    ar(start, end, prot, type, file, offset);
   }
 };
 
