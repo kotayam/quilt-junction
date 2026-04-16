@@ -64,6 +64,10 @@ Status<std::vector<elf_phdr>> ReadPHDRs(JunctionFile &f,
 
   // Confirm that the PHDRs contain valid state.
   for (const elf_phdr &phdr : phdrs) {
+    // kPTypeFileRef uses filesz for path length and memsz for VMA size, and
+    // offset/vaddr are unrelated, so the standard load-segment checks don't
+    // apply.
+    if (phdr.type == kPTypeFileRef) continue;
     if (phdr.filesz > phdr.memsz ||
         (phdr.align > 1 && (!std::has_single_bit(phdr.align) ||
                             (phdr.vaddr & (phdr.align - 1)) !=
