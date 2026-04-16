@@ -41,17 +41,17 @@ struct VMArea {
       : start(reinterpret_cast<uintptr_t>(addr)),
         end(start + len),
         prot(prot),
-        type(type),
-        ever_writable(prot & PROT_WRITE) {}
+        ever_writable(prot & PROT_WRITE),
+        type(type) {}
   VMArea(void *addr, size_t len, int prot, std::shared_ptr<File> file,
          off_t offset)
       : start(reinterpret_cast<uintptr_t>(addr)),
         end(start + len),
         prot(prot),
+        ever_writable(prot & PROT_WRITE),
         type(VMType::kFile),
         file(std::move(file)),
-        offset(offset),
-        ever_writable(prot & PROT_WRITE) {}
+        offset(offset) {}
 
   // Addr returns a pointer to the base address of the VMA.
   void *Addr() const { return reinterpret_cast<void *>(start); }
@@ -102,7 +102,9 @@ struct VMArea {
 
   template <class Archive>
   void serialize(Archive &ar) {
-    ar(start, end, prot, ever_writable, type, file, offset);
+    bool ew = ever_writable;
+    ar(start, end, prot, ew, type, file, offset);
+    ever_writable = ew;
   }
 };
 
