@@ -140,6 +140,10 @@ GetElfPHDRs(MemoryMap &mm, SnapshotContext &ctx) {
     phdrs.push_back(phdr);
 
     if (filesz) {
+      LOG(INFO) << "migration sender: Load PHDR vaddr=0x" << std::hex
+                << vma.start << " type=" << vma.TypeString()
+                << " filesz=" << std::dec << filesz
+                << " memsz=" << vma.Length();
       offset += filesz;
       iovs.emplace_back(reinterpret_cast<void *>(vma.start), filesz);
     }
