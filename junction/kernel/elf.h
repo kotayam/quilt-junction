@@ -96,6 +96,12 @@ enum : uint32_t {
   // specific semantics
   kPTypeLowProc = 0x70000000,
   kPTypeHighProc = 0x7fffffff,
+
+  // Junction-specific: file-backed read-only region to re-map from the
+  // original file on the destination using MAP_FIXED at vaddr.
+  // filesz bytes at offset in the ELF hold the null-terminated path string.
+  // paddr holds the file offset for mmap.
+  kPTypeFileRef = 0x6a756e63,  // 'junc'
 };
 
 enum {
