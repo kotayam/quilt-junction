@@ -123,6 +123,37 @@ GetElfPHDRs(MemoryMap &mm, SnapshotContext &ctx) {
       if (!ret) return MakeError(ret);
     }
 
+    // Stacks grow downward: trim leading zero pages and only transfer the
+    // live portion at the top, recording the offset into vaddr/memsz.
+    if (vma.type == VMType::kStack && filesz) {
+      size_t stack_off = GetStackMinOffset(reinterpret_cast<void *>(vma.start),
+                                           filesz);
+      uintptr_t live_start = vma.start + stack_off;
+      size_t live_len = vma.Length() - stack_off;
+      size_t live_filesz = PageAlign(
+          GetMinSize(reinterpret_cast<void *>(live_start), live_len));
+      elf_phdr phdr = {
+          .type = kPTypeLoad,
+          .flags = flags,
+          .offset = offset,
+          .vaddr = live_start,
+          .paddr = 0,
+          .filesz = live_filesz,
+          .memsz = live_len,
+          .align = kPageSize,
+      };
+      phdrs.push_back(phdr);
+      if (live_filesz) {
+        LOG(INFO) << "migration sender: Load PHDR vaddr=0x" << std::hex
+                  << live_start << " type=" << vma.TypeString()
+                  << " filesz=" << std::dec << live_filesz
+                  << " memsz=" << live_len;
+        offset += live_filesz;
+        iovs.emplace_back(reinterpret_cast<void *>(live_start), live_filesz);
+      }
+      continue;
+    }
+
     // Get rid of trailing zero pages.
     filesz = PageAlign(GetMinSize(reinterpret_cast<void *>(vma.start), filesz));
 
