@@ -64,6 +64,7 @@ class alignas(kCacheLineSize) JunctionCfg {
   [[nodiscard]] bool snapshot_terminate() const {
     return terminate_after_snapshot_;
   }
+  [[nodiscard]] bool skip_file_pages() const { return skip_file_pages_; }
   [[nodiscard]] uint16_t port() const { return port_; }
 
   [[nodiscard]] bool using_chroot() const { return chroot_path.size() > 0; }
@@ -105,6 +106,7 @@ class alignas(kCacheLineSize) JunctionCfg {
   bool terminate_after_snapshot_;
   int snapshot_on_stop_;
   bool mem_trace_;
+  bool skip_file_pages_;
   static JunctionCfg singleton_;
 };
 
