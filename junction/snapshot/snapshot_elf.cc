@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <utility>
@@ -37,6 +38,25 @@ Status<void> WriteU8(VectoredWriter &w, uint8_t v) {
   return WritevFull(w, {&iov, 1});
 }
 
+// Returns true if the page at mem matches the file content at file_offset.
+bool PageMatchesFile(int fd, off_t file_offset, const void *mem) {
+  alignas(64) std::array<std::byte, kPageSize> buf;
+  ssize_t n = ksys_pread(fd, buf.data(), kPageSize, file_offset);
+  if (n != static_cast<ssize_t>(kPageSize)) return false;
+  return std::memcmp(mem, buf.data(), kPageSize) == 0;
+}
+
+// Returns true if every page of the VMA matches the backing file content.
+bool VMAMatchesFile(int fd, const VMArea &vma) {
+  for (uintptr_t page = vma.start; page < vma.start + vma.Length();
+       page += kPageSize) {
+    off_t file_off = vma.offset + (page - vma.start);
+    if (!PageMatchesFile(fd, file_off, reinterpret_cast<void *>(page)))
+      return false;
+  }
+  return true;
+}
+
 Status<std::tuple<std::vector<elf_phdr>, std::vector<iovec>, std::vector<std::string>>>
 GetElfPHDRs(MemoryMap &mm, SnapshotContext &ctx) {
   const std::vector<VMArea> vmas = mm.get_vmas();
@@ -61,32 +81,37 @@ GetElfPHDRs(MemoryMap &mm, SnapshotContext &ctx) {
     if (vma.prot & PROT_WRITE) flags |= kFlagWrite;
     if (vma.prot & PROT_READ) flags |= kFlagRead;
 
-    // Optimization: for read-only file-backed VMAs, record the file path so
-    // the receiver can re-map the file at the same address instead of
-    // transferring the page data.
+    // Optimization: for file-backed VMAs whose pages match the backing file,
+    // record the file path so the receiver can re-map instead of transferring.
     if (GetCfg().skip_file_pages() && vma.type == VMType::kFile &&
-        !(vma.prot & PROT_WRITE) && !vma.ever_writable) {
+        !(vma.prot & PROT_WRITE)) {
       Status<std::string> path =
           vma.file->get_dent_ref().GetPathStr(FSRoot::GetGlobalRoot());
       if (path) {
-        size_t pathsz = path->size() + 1;  // include null terminator
-        path_strs.push_back(std::move(*path));
-        // offset is filled in below after all kPTypeLoad offsets are known.
-        elf_phdr phdr = {
-            .type = kPTypeFileRef,
-            .flags = flags,
-            .offset = 0,  // filled in after load segments
-            .vaddr = vma.start,
-            .paddr = static_cast<uint64_t>(vma.offset),  // file offset
-            .filesz = pathsz,
-            .memsz = vma.Length(),
-            .align = 1,  // path string; offset/vaddr alignment is irrelevant
-        };
-        fileref_phdrs.push_back(phdr);
-        fileref_iovs.emplace_back(const_cast<char *>(path_strs.back().c_str()), pathsz);
-        continue;
+        int fd = ksys_open(path->c_str(), O_RDONLY, 0);
+        if (fd >= 0) {
+          auto close_fd = finally([fd] { ksys_close(fd); });
+          if (VMAMatchesFile(fd, vma)) {
+            size_t pathsz = path->size() + 1;
+            path_strs.push_back(std::move(*path));
+            elf_phdr phdr = {
+                .type = kPTypeFileRef,
+                .flags = flags,
+                .offset = 0,  // filled in after load segments
+                .vaddr = vma.start,
+                .paddr = static_cast<uint64_t>(vma.offset),
+                .filesz = pathsz,
+                .memsz = vma.Length(),
+                .align = 1,
+            };
+            fileref_phdrs.push_back(phdr);
+            fileref_iovs.emplace_back(
+                const_cast<char *>(path_strs.back().c_str()), pathsz);
+            continue;
+          }
+        }
       }
-      // Fall through to normal handling if path lookup fails.
+      // Fall through to Load if file can't be opened or pages are dirty.
     }
 
     size_t filesz = vma.DataLength();
