@@ -59,13 +59,13 @@ def kill_leftover():
 def cmd_sender(port, skip_file_pages, verbose):
     kill_leftover()
     print(f"==> Starting counter_service on {SRC_IP}:{port}")
+    loglevel = "6" if verbose else "5"
     cmd = [
         "sudo", "-E", JUNCTION_RUN, SERVICE_CONFIG, "--snapshot_enabled",
+        "--loglevel", loglevel,
     ]
     if skip_file_pages:
         cmd.append("--skip_file_pages")
-    if verbose:
-        cmd += ["--loglevel", "6"]
     cmd += ["--", COUNTER_SVC, str(port)]
     subprocess.run(cmd)
 
@@ -73,9 +73,9 @@ def cmd_sender(port, skip_file_pages, verbose):
 def cmd_receiver(verbose):
     kill_leftover()
     print("==> Migration server listening on port 44")
-    cmd = ["sudo", "-E", JUNCTION_RUN, DST_CONFIG, "--snapshot_enabled"]
-    if verbose:
-        cmd += ["--loglevel", "6"]
+    loglevel = "6" if verbose else "5"
+    cmd = ["sudo", "-E", JUNCTION_RUN, DST_CONFIG, "--snapshot_enabled",
+           "--loglevel", loglevel]
     subprocess.run(cmd)
 
 
