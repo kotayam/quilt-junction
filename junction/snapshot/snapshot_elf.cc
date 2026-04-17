@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <utility>
@@ -11,6 +12,7 @@ extern "C" {
 #include "junction/base/error.h"
 #include "junction/base/finally.h"
 #include "junction/fs/file.h"
+#include "junction/fs/fs.h"
 #include "junction/fs/junction_file.h"
 #include "junction/fs/memfs/memfs.h"
 #include "junction/kernel/elf.h"
@@ -36,22 +38,82 @@ Status<void> WriteU8(VectoredWriter &w, uint8_t v) {
   return WritevFull(w, {&iov, 1});
 }
 
-Status<std::pair<std::vector<elf_phdr>, std::vector<iovec>>> GetElfPHDRs(
-    MemoryMap &mm, SnapshotContext &ctx) {
+// Returns true if the page at mem matches the file content at file_offset.
+bool PageMatchesFile(int fd, off_t file_offset, const void *mem) {
+  alignas(64) std::array<std::byte, kPageSize> buf;
+  ssize_t n = ksys_pread(fd, buf.data(), kPageSize, file_offset);
+  if (n != static_cast<ssize_t>(kPageSize)) return false;
+  return std::memcmp(mem, buf.data(), kPageSize) == 0;
+}
+
+// Returns true if every page of the VMA matches the backing file content.
+bool VMAMatchesFile(int fd, const VMArea &vma) {
+  for (uintptr_t page = vma.start; page < vma.start + vma.Length();
+       page += kPageSize) {
+    off_t file_off = vma.offset + (page - vma.start);
+    if (!PageMatchesFile(fd, file_off, reinterpret_cast<void *>(page)))
+      return false;
+  }
+  return true;
+}
+
+Status<std::tuple<std::vector<elf_phdr>, std::vector<iovec>,
+                  std::vector<std::string>>>
+GetElfPHDRs(MemoryMap &mm, SnapshotContext &ctx) {
   const std::vector<VMArea> vmas = mm.get_vmas();
   std::vector<elf_phdr> phdrs;
   std::vector<iovec> iovs;
+  std::vector<std::string> path_strs;  // keeps path data alive for iovs
   size_t total_sections = vmas.size() + ctx.mem_areas_.size();
   phdrs.reserve(total_sections);
   iovs.reserve(total_sections);
   uint64_t offset = total_sections * sizeof(elf_phdr) + sizeof(elf_header);
   offset = PageAlign(offset);
 
+  // Collect kPTypeFileRef entries separately so they are appended after all
+  // kPTypeLoad PHDRs. This keeps offset page-aligned for load segments; the
+  // unaligned path-string sizes only affect the trailing FileRef block.
+  std::vector<elf_phdr> fileref_phdrs;
+  std::vector<iovec> fileref_iovs;
+
   for (const VMArea &vma : vmas) {
     uint32_t flags = 0;
     if (vma.prot & PROT_EXEC) flags |= kFlagExec;
     if (vma.prot & PROT_WRITE) flags |= kFlagWrite;
     if (vma.prot & PROT_READ) flags |= kFlagRead;
+
+    // Optimization: for file-backed VMAs whose pages match the backing file,
+    // record the file path so the receiver can re-map instead of transferring.
+    if (GetCfg().skip_file_pages() && vma.type == VMType::kFile &&
+        !(vma.prot & PROT_WRITE)) {
+      Status<std::string> path =
+          vma.file->get_dent_ref().GetPathStr(FSRoot::GetGlobalRoot());
+      if (path) {
+        int fd = ksys_open(path->c_str(), O_RDONLY, 0);
+        if (fd >= 0) {
+          auto close_fd = finally([fd] { ksys_close(fd); });
+          if (VMAMatchesFile(fd, vma)) {
+            size_t pathsz = path->size() + 1;
+            path_strs.push_back(std::move(*path));
+            elf_phdr phdr = {
+                .type = kPTypeFileRef,
+                .flags = flags,
+                .offset = 0,  // filled in after load segments
+                .vaddr = vma.start,
+                .paddr = static_cast<uint64_t>(vma.offset),
+                .filesz = pathsz,
+                .memsz = vma.Length(),
+                .align = 1,
+            };
+            fileref_phdrs.push_back(phdr);
+            fileref_iovs.emplace_back(
+                const_cast<char *>(path_strs.back().c_str()), pathsz);
+            continue;
+          }
+        }
+      }
+      // Fall through to Load if file can't be opened or pages are dirty.
+    }
 
     size_t filesz = vma.DataLength();
 
@@ -60,6 +122,37 @@ Status<std::pair<std::vector<elf_phdr>, std::vector<iovec>>> GetElfPHDRs(
       auto ret = KernelMProtect(reinterpret_cast<void *>(vma.start), filesz,
                                 vma.prot | PROT_READ);
       if (!ret) return MakeError(ret);
+    }
+
+    // Stacks grow downward: trim leading zero pages and only transfer the
+    // live portion at the top, recording the offset into vaddr/memsz.
+    if (vma.type == VMType::kStack && filesz) {
+      size_t stack_off =
+          GetStackMinOffset(reinterpret_cast<void *>(vma.start), filesz);
+      uintptr_t live_start = vma.start + stack_off;
+      size_t live_len = vma.Length() - stack_off;
+      size_t live_filesz =
+          PageAlign(GetMinSize(reinterpret_cast<void *>(live_start), live_len));
+      elf_phdr phdr = {
+          .type = kPTypeLoad,
+          .flags = flags,
+          .offset = offset,
+          .vaddr = live_start,
+          .paddr = 0,
+          .filesz = live_filesz,
+          .memsz = live_len,
+          .align = kPageSize,
+      };
+      phdrs.push_back(phdr);
+      if (live_filesz) {
+        LOG(DEBUG) << "migration sender: Load PHDR vaddr=0x" << std::hex
+                   << live_start << " type=" << vma.TypeString()
+                   << " filesz=" << std::dec << live_filesz
+                   << " memsz=" << live_len;
+        offset += live_filesz;
+        iovs.emplace_back(reinterpret_cast<void *>(live_start), live_filesz);
+      }
+      continue;
     }
 
     // Get rid of trailing zero pages.
@@ -79,6 +172,10 @@ Status<std::pair<std::vector<elf_phdr>, std::vector<iovec>>> GetElfPHDRs(
     phdrs.push_back(phdr);
 
     if (filesz) {
+      LOG(DEBUG) << "migration sender: Load PHDR vaddr=0x" << std::hex
+                 << vma.start << " type=" << vma.TypeString()
+                 << " filesz=" << std::dec << filesz
+                 << " memsz=" << vma.Length();
       offset += filesz;
       iovs.emplace_back(reinterpret_cast<void *>(vma.start), filesz);
     }
@@ -102,7 +199,24 @@ Status<std::pair<std::vector<elf_phdr>, std::vector<iovec>>> GetElfPHDRs(
     if (saved_area) iovs.emplace_back(area.ptr, saved_area);
   }
 
-  return std::make_pair(phdrs, iovs);
+  // Now assign offsets to FileRef PHDRs and append them.
+  for (size_t i = 0; i < fileref_phdrs.size(); i++) {
+    fileref_phdrs[i].offset = offset;
+    LOG(DEBUG) << "migration sender: FileRef PHDR path="
+               << std::string_view(
+                      static_cast<const char *>(fileref_iovs[i].iov_base),
+                      fileref_phdrs[i].filesz - 1)
+               << " vaddr=0x" << std::hex << fileref_phdrs[i].vaddr
+               << " offset=0x" << fileref_phdrs[i].offset
+               << " filesz=" << std::dec << fileref_phdrs[i].filesz
+               << " memsz=" << fileref_phdrs[i].memsz;
+    offset += fileref_phdrs[i].filesz;
+    phdrs.push_back(fileref_phdrs[i]);
+    iovs.push_back(fileref_iovs[i]);
+  }
+
+  return std::make_tuple(std::move(phdrs), std::move(iovs),
+                         std::move(path_strs));
 }
 
 // Builds the ELF iovec list (header + phdrs + padding + data) and writes it
@@ -111,7 +225,7 @@ Status<void> WriteElfIovecs(MemoryMap &mm, SnapshotContext &ctx,
                             VectoredWriter &out) {
   auto ret = GetElfPHDRs(mm, ctx);
   if (!ret) return MakeError(ret);
-  auto &[pheaders, iovs] = *ret;
+  auto &[pheaders, iovs, path_strs] = *ret;
 
   elf_header hdr;
   memset(&hdr, 0, sizeof(elf_header));

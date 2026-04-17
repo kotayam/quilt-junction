@@ -116,6 +116,9 @@ po::options_description GetOptions() {
        "use MAP_POPULATE on restore")  //
       ("snapshot_terminate", po::bool_switch()->default_value(false),
        "terminate after snapshot")  //
+      ("skip_file_pages", po::bool_switch()->default_value(false),
+       "skip file-backed read-only pages during migration (destination must "
+       "have the same files)")  //
       ("function_arg", po::value<std::string>()->default_value(""),
        "argument provided to serverless function")  //
       ("function_name", po::value<std::string>()->default_value("func"),
@@ -193,6 +196,7 @@ Status<void> JunctionCfg::FillFromArgs(int argc, char *argv[]) {
   restore_populate_ = vm["restore_populate"].as<bool>();
   mem_trace_ = vm["mem-trace"].as<bool>();
   terminate_after_snapshot_ = vm["snapshot_terminate"].as<bool>();
+  skip_file_pages_ = vm["skip_file_pages"].as<bool>();
 
   if (mem_trace_ && !stack_switching) {
     std::cerr << "Enabling stack switching for memory tracing" << std::endl;

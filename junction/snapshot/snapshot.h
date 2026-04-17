@@ -15,6 +15,7 @@ extern "C" {
 #include <string_view>
 #include <vector>
 
+#include "junction/base/arch.h"
 #include "junction/base/bits.h"
 #include "junction/base/error.h"
 #include "junction/base/time.h"
@@ -38,6 +39,17 @@ inline size_t GetMinSize(const void *buf, size_t len) {
   len = div_up(len, sizeof(uint64_t));
   return GetMinSize({reinterpret_cast<const uint64_t *>(buf), len}) *
          sizeof(uint64_t);
+}
+
+// For stacks (which grow downward), returns the offset of the first non-zero
+// page from the base, page-aligned down.
+inline size_t GetStackMinOffset(const void *buf, size_t len) {
+  const auto *words = reinterpret_cast<const uint64_t *>(buf);
+  size_t nwords = div_up(len, sizeof(uint64_t));
+  auto it = std::find_if(words, words + nwords,
+                         [](const uint64_t &c) { return c != 0; });
+  size_t byte_off = std::distance(words, it) * sizeof(uint64_t);
+  return PageAlignDown(byte_off);
 }
 }  // anonymous namespace
 
