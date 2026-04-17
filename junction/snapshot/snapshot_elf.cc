@@ -57,7 +57,8 @@ bool VMAMatchesFile(int fd, const VMArea &vma) {
   return true;
 }
 
-Status<std::tuple<std::vector<elf_phdr>, std::vector<iovec>, std::vector<std::string>>>
+Status<std::tuple<std::vector<elf_phdr>, std::vector<iovec>,
+                  std::vector<std::string>>>
 GetElfPHDRs(MemoryMap &mm, SnapshotContext &ctx) {
   const std::vector<VMArea> vmas = mm.get_vmas();
   std::vector<elf_phdr> phdrs;
@@ -126,12 +127,12 @@ GetElfPHDRs(MemoryMap &mm, SnapshotContext &ctx) {
     // Stacks grow downward: trim leading zero pages and only transfer the
     // live portion at the top, recording the offset into vaddr/memsz.
     if (vma.type == VMType::kStack && filesz) {
-      size_t stack_off = GetStackMinOffset(reinterpret_cast<void *>(vma.start),
-                                           filesz);
+      size_t stack_off =
+          GetStackMinOffset(reinterpret_cast<void *>(vma.start), filesz);
       uintptr_t live_start = vma.start + stack_off;
       size_t live_len = vma.Length() - stack_off;
-      size_t live_filesz = PageAlign(
-          GetMinSize(reinterpret_cast<void *>(live_start), live_len));
+      size_t live_filesz =
+          PageAlign(GetMinSize(reinterpret_cast<void *>(live_start), live_len));
       elf_phdr phdr = {
           .type = kPTypeLoad,
           .flags = flags,
@@ -145,9 +146,9 @@ GetElfPHDRs(MemoryMap &mm, SnapshotContext &ctx) {
       phdrs.push_back(phdr);
       if (live_filesz) {
         LOG(DEBUG) << "migration sender: Load PHDR vaddr=0x" << std::hex
-                  << live_start << " type=" << vma.TypeString()
-                  << " filesz=" << std::dec << live_filesz
-                  << " memsz=" << live_len;
+                   << live_start << " type=" << vma.TypeString()
+                   << " filesz=" << std::dec << live_filesz
+                   << " memsz=" << live_len;
         offset += live_filesz;
         iovs.emplace_back(reinterpret_cast<void *>(live_start), live_filesz);
       }
@@ -172,9 +173,9 @@ GetElfPHDRs(MemoryMap &mm, SnapshotContext &ctx) {
 
     if (filesz) {
       LOG(DEBUG) << "migration sender: Load PHDR vaddr=0x" << std::hex
-                << vma.start << " type=" << vma.TypeString()
-                << " filesz=" << std::dec << filesz
-                << " memsz=" << vma.Length();
+                 << vma.start << " type=" << vma.TypeString()
+                 << " filesz=" << std::dec << filesz
+                 << " memsz=" << vma.Length();
       offset += filesz;
       iovs.emplace_back(reinterpret_cast<void *>(vma.start), filesz);
     }
@@ -202,18 +203,20 @@ GetElfPHDRs(MemoryMap &mm, SnapshotContext &ctx) {
   for (size_t i = 0; i < fileref_phdrs.size(); i++) {
     fileref_phdrs[i].offset = offset;
     LOG(DEBUG) << "migration sender: FileRef PHDR path="
-              << std::string_view(static_cast<const char *>(fileref_iovs[i].iov_base),
-                                  fileref_phdrs[i].filesz - 1)
-              << " vaddr=0x" << std::hex << fileref_phdrs[i].vaddr
-              << " offset=0x" << fileref_phdrs[i].offset
-              << " filesz=" << std::dec << fileref_phdrs[i].filesz
-              << " memsz=" << fileref_phdrs[i].memsz;
+               << std::string_view(
+                      static_cast<const char *>(fileref_iovs[i].iov_base),
+                      fileref_phdrs[i].filesz - 1)
+               << " vaddr=0x" << std::hex << fileref_phdrs[i].vaddr
+               << " offset=0x" << fileref_phdrs[i].offset
+               << " filesz=" << std::dec << fileref_phdrs[i].filesz
+               << " memsz=" << fileref_phdrs[i].memsz;
     offset += fileref_phdrs[i].filesz;
     phdrs.push_back(fileref_phdrs[i]);
     iovs.push_back(fileref_iovs[i]);
   }
 
-  return std::make_tuple(std::move(phdrs), std::move(iovs), std::move(path_strs));
+  return std::make_tuple(std::move(phdrs), std::move(iovs),
+                         std::move(path_strs));
 }
 
 // Builds the ELF iovec list (header + phdrs + padding + data) and writes it

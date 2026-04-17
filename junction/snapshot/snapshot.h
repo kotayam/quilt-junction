@@ -15,8 +15,8 @@ extern "C" {
 #include <string_view>
 #include <vector>
 
-#include "junction/base/bits.h"
 #include "junction/base/arch.h"
+#include "junction/base/bits.h"
 #include "junction/base/error.h"
 #include "junction/base/time.h"
 #include "junction/bindings/net.h"
