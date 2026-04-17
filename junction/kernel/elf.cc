@@ -275,7 +275,7 @@ Status<elf_data> DoELFLoad(MemoryMap &mm, JunctionFile &file, FSRoot &fs,
     file.Seek(p.offset);
     if (Status<void> r = ReadFull(file, std::as_writable_bytes(std::span(path))); !r)
       return MakeError(r);
-    LOG(INFO) << "elf: FileRef restore path=" << path
+    LOG(DEBUG) << "elf: FileRef restore path=" << path
               << " vaddr=0x" << std::hex << p.vaddr
               << " memsz=" << std::dec << p.memsz
               << " file_offset=0x" << std::hex << p.paddr << std::dec;

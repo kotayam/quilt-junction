@@ -144,7 +144,7 @@ GetElfPHDRs(MemoryMap &mm, SnapshotContext &ctx) {
       };
       phdrs.push_back(phdr);
       if (live_filesz) {
-        LOG(INFO) << "migration sender: Load PHDR vaddr=0x" << std::hex
+        LOG(DEBUG) << "migration sender: Load PHDR vaddr=0x" << std::hex
                   << live_start << " type=" << vma.TypeString()
                   << " filesz=" << std::dec << live_filesz
                   << " memsz=" << live_len;
@@ -171,7 +171,7 @@ GetElfPHDRs(MemoryMap &mm, SnapshotContext &ctx) {
     phdrs.push_back(phdr);
 
     if (filesz) {
-      LOG(INFO) << "migration sender: Load PHDR vaddr=0x" << std::hex
+      LOG(DEBUG) << "migration sender: Load PHDR vaddr=0x" << std::hex
                 << vma.start << " type=" << vma.TypeString()
                 << " filesz=" << std::dec << filesz
                 << " memsz=" << vma.Length();
@@ -201,7 +201,7 @@ GetElfPHDRs(MemoryMap &mm, SnapshotContext &ctx) {
   // Now assign offsets to FileRef PHDRs and append them.
   for (size_t i = 0; i < fileref_phdrs.size(); i++) {
     fileref_phdrs[i].offset = offset;
-    LOG(INFO) << "migration sender: FileRef PHDR path="
+    LOG(DEBUG) << "migration sender: FileRef PHDR path="
               << std::string_view(static_cast<const char *>(fileref_iovs[i].iov_base),
                                   fileref_phdrs[i].filesz - 1)
               << " vaddr=0x" << std::hex << fileref_phdrs[i].vaddr

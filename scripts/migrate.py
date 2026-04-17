@@ -56,7 +56,7 @@ def kill_leftover():
     time.sleep(1)
 
 
-def cmd_sender(port, skip_file_pages):
+def cmd_sender(port, skip_file_pages, verbose):
     kill_leftover()
     print(f"==> Starting counter_service on {SRC_IP}:{port}")
     cmd = [
@@ -64,16 +64,19 @@ def cmd_sender(port, skip_file_pages):
     ]
     if skip_file_pages:
         cmd.append("--skip_file_pages")
+    if verbose:
+        cmd += ["--loglevel", "6"]
     cmd += ["--", COUNTER_SVC, str(port)]
     subprocess.run(cmd)
 
 
-def cmd_receiver():
+def cmd_receiver(verbose):
     kill_leftover()
     print("==> Migration server listening on port 44")
-    subprocess.run([
-        "sudo", "-E", JUNCTION_RUN, DST_CONFIG, "--snapshot_enabled"
-    ])
+    cmd = ["sudo", "-E", JUNCTION_RUN, DST_CONFIG, "--snapshot_enabled"]
+    if verbose:
+        cmd += ["--loglevel", "6"]
+    subprocess.run(cmd)
 
 
 def cmd_initiator(port):
@@ -129,6 +132,7 @@ def cmd_initiator(port):
 def main():
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("-v", action="store_true", help="verbose logging")
     sub = parser.add_subparsers(dest="role", required=True)
     s = sub.add_parser("sender")
     s.add_argument("port", type=int)
@@ -140,9 +144,9 @@ def main():
     args = parser.parse_args()
 
     if args.role == "sender":
-        cmd_sender(args.port, getattr(args, "skip_file_pages", False))
+        cmd_sender(args.port, getattr(args, "skip_file_pages", False), args.v)
     elif args.role == "receiver":
-        cmd_receiver()
+        cmd_receiver(args.v)
     elif args.role == "initiator":
         cmd_initiator(args.port)
 
