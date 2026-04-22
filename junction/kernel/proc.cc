@@ -225,7 +225,6 @@ Thread::~Thread() {
 bool Thread::IsStopped() const { return proc_->is_stopped(); }
 
 Status<void> Thread::DropUnusedStack() {
-  return {};
   assert(get_process().is_fully_stopped());
   // If the thread has indicated that signals cannot be delivered on it then we
   // shouldn't assume that we can clobber above rsp.
