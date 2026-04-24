@@ -95,9 +95,10 @@ def cmd_initiator(port, scatter_copy):
 
     # Trigger migration and measure
     t_start = time.perf_counter()
-    migrate_cmd = [JUNCTION_CTL, SRC_IP, "migrate", pid, DST_IP, "44"]
+    migrate_cmd = [JUNCTION_CTL, SRC_IP, "migrate"]
     if scatter_copy:
         migrate_cmd.append("--scatter-copy")
+    migrate_cmd += [pid, DST_IP, "44"]
     subprocess.run(migrate_cmd, check=True)
     t_src_down = time.perf_counter()
 
