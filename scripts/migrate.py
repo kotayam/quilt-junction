@@ -79,7 +79,7 @@ def cmd_receiver(verbose):
     subprocess.run(cmd)
 
 
-def cmd_initiator(port):
+def cmd_initiator(port, scatter_copy):
     # Increment counter on source
     print(f"==> Incrementing counter on source ({SRC_IP}):")
     for _ in range(3):
@@ -95,8 +95,10 @@ def cmd_initiator(port):
 
     # Trigger migration and measure
     t_start = time.perf_counter()
-    subprocess.run([JUNCTION_CTL, SRC_IP, "migrate", pid, DST_IP, "44"],
-                   check=True)
+    migrate_cmd = [JUNCTION_CTL, SRC_IP, "migrate", pid, DST_IP, "44"]
+    if scatter_copy:
+        migrate_cmd.append("--scatter-copy")
+    subprocess.run(migrate_cmd, check=True)
     t_src_down = time.perf_counter()
 
     # Wait for destination to be ready
@@ -141,6 +143,8 @@ def main():
     sub.add_parser("receiver")
     i = sub.add_parser("initiator")
     i.add_argument("port", type=int)
+    i.add_argument("--scatter-copy", action="store_true",
+                   help="use scatter-copy migration instead of ELF format")
     args = parser.parse_args()
 
     if args.role == "sender":
@@ -148,7 +152,7 @@ def main():
     elif args.role == "receiver":
         cmd_receiver(args.v)
     elif args.role == "initiator":
-        cmd_initiator(args.port)
+        cmd_initiator(args.port, getattr(args, "scatter_copy", False))
 
 
 if __name__ == "__main__":
