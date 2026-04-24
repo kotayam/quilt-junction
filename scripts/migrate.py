@@ -128,7 +128,7 @@ def cmd_initiator(port, scatter_copy):
     print("==> Final counter state on destination:")
     print(send_cmd(DST_IP, port, "GET"))
 
-    print(f"\n==> Downtime:             {downtime_us:.1f} us")
+    # print(f"\n==> Downtime:             {downtime_us:.1f} us")
     print(f"==> Total migration time: {total_us:.1f} us")
 
 
