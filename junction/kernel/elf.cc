@@ -112,11 +112,12 @@ Status<void> LoadOneSegment(MemoryMap &mm, JunctionFile &f, off_t map_off,
   if (phdr.flags & kFlagWrite) prot |= PROT_WRITE;
   if (phdr.flags & kFlagRead) prot |= PROT_READ;
 
-  // For migration ELFs (non-relocatable, map_off == 0), paddr encodes the
-  // byte offset within the VMA where file data begins. This supports stack
-  // segments where leading zero pages are trimmed by the sender.
-  // For normal (relocatable) binaries, paddr is ignored.
-  uint64_t data_off = (map_off == 0 && phdr.paddr < phdr.memsz) ? phdr.paddr : 0;
+  // For migration ELFs, paddr encodes the byte offset within the VMA where
+  // file data begins (used for stack trimming). Normal binaries have
+  // paddr == vaddr; migration stack segments have paddr as a small offset
+  // (!= vaddr). Non-stack migration segments have paddr == 0.
+  uint64_t data_off =
+      (phdr.paddr != phdr.vaddr && phdr.paddr < phdr.memsz) ? phdr.paddr : 0;
 
   // Determine the layout.
   uintptr_t start = PageAlignDown(phdr.vaddr + map_off);
