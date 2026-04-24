@@ -294,9 +294,8 @@ bool HandleMigrateStopAndCopy(ControlConn &c,
             << " us";
   auto resume = finally([&] { p->DoExit(0); });
 
-  Status<void> ret = scatter
-                         ? SnapshotProcToScatterStream(p.get(), *conn)
-                         : SnapshotProcToELFStream(p.get(), *conn);
+  Status<void> ret = scatter ? SnapshotProcToScatterStream(p.get(), *conn)
+                             : SnapshotProcToELFStream(p.get(), *conn);
   if (!ret) {
     std::ostringstream msg;
     msg << "migrate: snapshot failed: " << ret.error();

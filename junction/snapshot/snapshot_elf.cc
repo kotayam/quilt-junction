@@ -121,9 +121,8 @@ GetElfPHDRs(MemoryMap &mm, SnapshotContext &ctx) {
       if (live_filesz) {
         LOG(DEBUG) << "migration sender: Load PHDR vaddr=0x" << std::hex
                    << live_start << " type=" << vma.TypeString()
-                   << " prot=" << vma.ProtString()
-                   << " filesz=" << std::dec << live_filesz
-                   << " memsz=" << vma.Length();
+                   << " prot=" << vma.ProtString() << " filesz=" << std::dec
+                   << live_filesz << " memsz=" << vma.Length();
         offset += live_filesz;
         iovs.emplace_back(reinterpret_cast<void *>(live_start), live_filesz);
       }
@@ -149,9 +148,8 @@ GetElfPHDRs(MemoryMap &mm, SnapshotContext &ctx) {
     if (filesz) {
       LOG(DEBUG) << "migration sender: Load PHDR vaddr=0x" << std::hex
                  << vma.start << " type=" << vma.TypeString()
-                 << " prot=" << vma.ProtString()
-                 << " filesz=" << std::dec << filesz
-                 << " memsz=" << vma.Length();
+                 << " prot=" << vma.ProtString() << " filesz=" << std::dec
+                 << filesz << " memsz=" << vma.Length();
       offset += filesz;
       iovs.emplace_back(reinterpret_cast<void *>(vma.start), filesz);
     }
@@ -295,8 +293,8 @@ Status<void> SnapshotProcToELFStream(Process *p, VectoredWriter &out) {
   LOG(INFO) << "migration sender: serialize took " << (t1 - t0).Microseconds()
             << " us (" << metadata_buf->size() << " bytes)";
 
-  if (Status<void> ret = WriteStreamPrefix(out, MigrationType::kStopAndCopy,
-                                           *metadata_buf);
+  if (Status<void> ret =
+          WriteStreamPrefix(out, MigrationType::kStopAndCopy, *metadata_buf);
       !ret)
     return ret;
 

@@ -87,11 +87,11 @@ BuildMigrateSegments(MemoryMap &mm, SnapshotContext &ctx) {
       size_t live_filesz =
           PageAlign(GetMinSize(reinterpret_cast<void *>(live_start), live_len));
       segs.push_back({.vaddr = vma.start,
-                       .memsz = vma.Length(),
-                       .filesz = live_filesz,
-                       .file_offset = stack_off,
-                       .prot = prot,
-                       .type = kMigrateSegLoad});
+                      .memsz = vma.Length(),
+                      .filesz = live_filesz,
+                      .file_offset = stack_off,
+                      .prot = prot,
+                      .type = kMigrateSegLoad});
       if (live_filesz) {
         LOG(DEBUG) << "scatter sender: Load vaddr=0x" << std::hex << live_start
                    << " type=" << vma.TypeString() << " filesz=" << std::dec
@@ -105,11 +105,11 @@ BuildMigrateSegments(MemoryMap &mm, SnapshotContext &ctx) {
     filesz = PageAlign(GetMinSize(reinterpret_cast<void *>(vma.start), filesz));
 
     segs.push_back({.vaddr = vma.start,
-                     .memsz = vma.Length(),
-                     .filesz = filesz,
-                     .file_offset = 0,
-                     .prot = prot,
-                     .type = kMigrateSegLoad});
+                    .memsz = vma.Length(),
+                    .filesz = filesz,
+                    .file_offset = 0,
+                    .prot = prot,
+                    .type = kMigrateSegLoad});
     if (filesz) {
       LOG(DEBUG) << "scatter sender: Load vaddr=0x" << std::hex << vma.start
                  << " type=" << vma.TypeString() << " filesz=" << std::dec
@@ -122,11 +122,11 @@ BuildMigrateSegments(MemoryMap &mm, SnapshotContext &ctx) {
   for (const FSMemoryArea &area : ctx.mem_areas_) {
     size_t saved_area = PageAlign(GetMinSize(area.ptr, area.in_use_size));
     segs.push_back({.vaddr = reinterpret_cast<uint64_t>(area.ptr),
-                     .memsz = area.max_size,
-                     .filesz = saved_area,
-                     .file_offset = 0,
-                     .prot = PROT_READ | PROT_WRITE,
-                     .type = kMigrateSegLoad});
+                    .memsz = area.max_size,
+                    .filesz = saved_area,
+                    .file_offset = 0,
+                    .prot = PROT_READ | PROT_WRITE,
+                    .type = kMigrateSegLoad});
     if (saved_area) iovs.emplace_back(area.ptr, saved_area);
   }
 
@@ -189,8 +189,8 @@ Status<void> SnapshotProcToScatterStream(Process *p, VectoredWriter &out) {
   LOG(INFO) << "scatter sender: serialize took " << (t1 - t0).Microseconds()
             << " us (" << metadata_buf->size() << " bytes)";
 
-  if (Status<void> ret = WriteStreamPrefix(out, MigrationType::kScatterCopy,
-                                           *metadata_buf);
+  if (Status<void> ret =
+          WriteStreamPrefix(out, MigrationType::kScatterCopy, *metadata_buf);
       !ret)
     return ret;
 
@@ -239,9 +239,9 @@ Status<std::shared_ptr<Process>> RestoreFromScatterStream(
     if (seg.type != kMigrateSegLoad) continue;
     if (seg.memsz == 0) continue;
 
-    Status<void *> ret = mm.MMapAnonymous(
-        reinterpret_cast<void *>(seg.vaddr), seg.memsz,
-        PROT_READ | PROT_WRITE, MAP_FIXED);
+    Status<void *> ret =
+        mm.MMapAnonymous(reinterpret_cast<void *>(seg.vaddr), seg.memsz,
+                         PROT_READ | PROT_WRITE, MAP_FIXED);
     if (!ret) {
       LOG(ERR) << "scatter receiver: MMapAnonymous failed vaddr=0x" << std::hex
                << seg.vaddr << " memsz=" << std::dec << seg.memsz;
@@ -316,9 +316,9 @@ Status<std::shared_ptr<Process>> RestoreFromScatterStream(
     }
 
     int prot = static_cast<int>(seg.prot);
-    if (Status<void> r = ref->MMapFixed(
-            mm, reinterpret_cast<void *>(seg.vaddr), seg.memsz, prot,
-            MAP_DENYWRITE, static_cast<off_t>(seg.file_offset));
+    if (Status<void> r = ref->MMapFixed(mm, reinterpret_cast<void *>(seg.vaddr),
+                                        seg.memsz, prot, MAP_DENYWRITE,
+                                        static_cast<off_t>(seg.file_offset));
         !r) {
       LOG(ERR) << "scatter receiver: FileRef MMapFixed failed for " << path;
       return MakeError(r);

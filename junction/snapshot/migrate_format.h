@@ -18,10 +18,12 @@ enum : uint32_t {
 };
 
 struct MigrateSegment {
-  uint64_t vaddr;        // target virtual address
-  uint64_t memsz;        // total memory region size
-  uint64_t filesz;       // bytes in stream (page data for Load, path len for FileRef)
-  uint64_t file_offset;  // FileRef: offset into backing file; Load: data placement offset (stack trimming)
+  uint64_t vaddr;  // target virtual address
+  uint64_t memsz;  // total memory region size
+  uint64_t
+      filesz;  // bytes in stream (page data for Load, path len for FileRef)
+  uint64_t file_offset;  // FileRef: offset into backing file; Load: data
+                         // placement offset (stack trimming)
   uint32_t prot;         // PROT_READ | PROT_WRITE | PROT_EXEC
   uint32_t type;         // kMigrateSegLoad or kMigrateSegFileRef
 };
