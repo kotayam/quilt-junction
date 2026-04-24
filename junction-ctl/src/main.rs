@@ -147,6 +147,8 @@ enum Command {
         pid: u64,
         dest_ip: String,
         dest_port: u16,
+        #[arg(long, default_value_t = false)]
+        scatter_copy: bool,
     },
 }
 
@@ -677,13 +679,13 @@ fn get_stats(uri: &str) -> anyhow::Result<()> {
     }
 }
 
-fn migrate(uri: &str, pid: u64, dest_ip: &str, dest_port: u16) -> anyhow::Result<()> {
+fn migrate(uri: &str, pid: u64, dest_ip: &str, dest_port: u16, scatter_copy: bool) -> anyhow::Result<()> {
     let dest_ip: u32 = dest_ip
         .parse::<std::net::Ipv4Addr>()
         .context("invalid dest_ip")?
         .into();
     let mut fbb = FlatBufferBuilder::new();
-    let inner = MigrateRequest::create(&mut fbb, &MigrateRequestArgs { pid, dest_ip, dest_port });
+    let inner = MigrateRequest::create(&mut fbb, &MigrateRequestArgs { pid, dest_ip, dest_port, scatter_copy });
     let req = Request::create(
         &mut fbb,
         &RequestArgs {
@@ -752,8 +754,8 @@ fn main() -> anyhow::Result<()> {
         Some(Command::Signal { pid, signal: signo }) => signal(uri.as_str(), pid, signo),
         Some(Command::GetStats) => get_stats(uri.as_str()),
         Some(Command::PS) => ps(uri.as_str()),
-        Some(Command::Migrate { pid, dest_ip, dest_port }) => {
-            migrate(uri.as_str(), pid, dest_ip.as_str(), dest_port)
+        Some(Command::Migrate { pid, dest_ip, dest_port, scatter_copy }) => {
+            migrate(uri.as_str(), pid, dest_ip.as_str(), dest_port, scatter_copy)
         }
     }
 }
