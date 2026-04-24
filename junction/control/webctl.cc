@@ -261,8 +261,10 @@ bool HandlePS(ControlConn &c, const ctl_schema::PSRequest *req) {
 }
 bool HandleMigrateStopAndCopy(ControlConn &c,
                               const ctl_schema::MigrateRequest *req) {
-  LOG(INFO) << "handling stop-and-copy migration for pid " << req->pid()
-            << " (skip_file_pages=" << GetCfg().skip_file_pages() << ")";
+  bool scatter = req->scatter_copy();
+  LOG(INFO) << "handling migration for pid " << req->pid()
+            << " (skip_file_pages=" << GetCfg().skip_file_pages()
+            << " scatter_copy=" << scatter << ")";
   Time t0 = Time::Now();
 
   std::shared_ptr<Process> p = Process::Find(req->pid());
@@ -292,7 +294,10 @@ bool HandleMigrateStopAndCopy(ControlConn &c,
             << " us";
   auto resume = finally([&] { p->DoExit(0); });
 
-  if (Status<void> ret = SnapshotProcToELFStream(p.get(), *conn); !ret) {
+  Status<void> ret = scatter
+                         ? SnapshotProcToScatterStream(p.get(), *conn)
+                         : SnapshotProcToELFStream(p.get(), *conn);
+  if (!ret) {
     std::ostringstream msg;
     msg << "migrate: snapshot failed: " << ret.error();
     if (!c.SendError(msg.str())) LOG(WARN) << "ctl: failed to send error";

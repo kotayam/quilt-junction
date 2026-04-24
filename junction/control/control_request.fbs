@@ -41,6 +41,7 @@ table MigrateRequest {
     pid: uint64;
     dest_ip: uint32;
     dest_port: uint16;
+    scatter_copy: bool;
 }
 
 table GetStatsRequest {
