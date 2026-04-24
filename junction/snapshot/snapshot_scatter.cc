@@ -264,7 +264,8 @@ Status<std::shared_ptr<Process>> RestoreFromScatterStream(
   size_t data_bytes = 0;
   for (const auto &iov : load_iovs) data_bytes += iov.iov_len;
   LOG(INFO) << "scatter receiver: data transfer took "
-            << (t1 - t0).Microseconds() << " us (" << data_bytes << " bytes)";
+            << (t1 - t0).Microseconds() << " us (" << data_bytes << " bytes, "
+            << (data_bytes / 1024) << " KiB)";
 
   // Phase 3: Zero BSS gaps and set final protections.
   for (const auto &seg : segs) {

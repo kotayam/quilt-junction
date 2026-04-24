@@ -394,7 +394,7 @@ Status<std::shared_ptr<Process>> RestoreProcessFromELFStream(
   Time t1 = Time::Now();
   LOG(INFO) << "migration receiver: metadata transfer took "
             << (t1 - t0).Microseconds() << " us (" << metadata_buf.size()
-            << " bytes)";
+            << " bytes, " << (metadata_buf.size() / 1024) << " KiB)";
 
   // Deserialize metadata.
   auto p = DeserializeSnapshotMetadata(metadata_buf);
@@ -434,7 +434,8 @@ Status<std::shared_ptr<Process>> RestoreProcessFromELFStream(
   }
   Time t3 = Time::Now();
   LOG(INFO) << "migration receiver: ELF transfer took "
-            << (t3 - t2).Microseconds() << " us (" << elf_bytes << " bytes)";
+            << (t3 - t2).Microseconds() << " us (" << elf_bytes << " bytes, "
+            << (elf_bytes / 1024) << " KiB)";
 
   Status<JunctionFile> elf = JunctionFile::Open(
       (*p)->get_fs(), "/tmp/junction_migrate.elf", 0, FileMode::kRead);
