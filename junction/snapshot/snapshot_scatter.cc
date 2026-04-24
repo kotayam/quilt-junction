@@ -86,16 +86,16 @@ BuildMigrateSegments(MemoryMap &mm, SnapshotContext &ctx) {
       size_t live_len = vma.Length() - stack_off;
       size_t live_filesz =
           PageAlign(GetMinSize(reinterpret_cast<void *>(live_start), live_len));
-      segs.push_back({.vaddr = live_start,
-                       .memsz = live_len,
+      segs.push_back({.vaddr = vma.start,
+                       .memsz = vma.Length(),
                        .filesz = live_filesz,
-                       .file_offset = 0,
+                       .file_offset = stack_off,
                        .prot = prot,
                        .type = kMigrateSegLoad});
       if (live_filesz) {
         LOG(DEBUG) << "scatter sender: Load vaddr=0x" << std::hex << live_start
                    << " type=" << vma.TypeString() << " filesz=" << std::dec
-                   << live_filesz << " memsz=" << live_len;
+                   << live_filesz << " memsz=" << vma.Length();
         iovs.emplace_back(reinterpret_cast<void *>(live_start), live_filesz);
       }
       continue;
@@ -249,7 +249,8 @@ Status<std::shared_ptr<Process>> RestoreFromScatterStream(
     }
 
     if (seg.filesz > 0)
-      load_iovs.emplace_back(reinterpret_cast<void *>(seg.vaddr), seg.filesz);
+      load_iovs.emplace_back(
+          reinterpret_cast<void *>(seg.vaddr + seg.file_offset), seg.filesz);
   }
 
   // Phase 2: Single scatter-read for all kLoad data.
@@ -271,7 +272,7 @@ Status<std::shared_ptr<Process>> RestoreFromScatterStream(
 
     // Zero partial page between filesz and page-aligned end.
     if (seg.filesz < seg.memsz) {
-      uintptr_t file_end = seg.vaddr + seg.filesz;
+      uintptr_t file_end = seg.vaddr + seg.file_offset + seg.filesz;
       uintptr_t gap_end = PageAlign(file_end);
       if (gap_end > file_end && gap_end <= seg.vaddr + seg.memsz)
         std::memset(reinterpret_cast<void *>(file_end), 0, gap_end - file_end);

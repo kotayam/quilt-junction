@@ -98,7 +98,8 @@ GetElfPHDRs(MemoryMap &mm, SnapshotContext &ctx) {
     }
 
     // Stacks grow downward: trim leading zero pages and only transfer the
-    // live portion at the top, recording the offset into vaddr/memsz.
+    // live portion, but preserve the full VMA bounds so the stack can grow.
+    // paddr stores the offset from vaddr where file data begins.
     if (vma.type == VMType::kStack && filesz) {
       size_t stack_off =
           GetStackMinOffset(reinterpret_cast<void *>(vma.start), filesz);
@@ -110,10 +111,10 @@ GetElfPHDRs(MemoryMap &mm, SnapshotContext &ctx) {
           .type = kPTypeLoad,
           .flags = flags,
           .offset = offset,
-          .vaddr = live_start,
-          .paddr = 0,
+          .vaddr = vma.start,
+          .paddr = stack_off,
           .filesz = live_filesz,
-          .memsz = live_len,
+          .memsz = vma.Length(),
           .align = kPageSize,
       };
       phdrs.push_back(phdr);
@@ -122,7 +123,7 @@ GetElfPHDRs(MemoryMap &mm, SnapshotContext &ctx) {
                    << live_start << " type=" << vma.TypeString()
                    << " prot=" << vma.ProtString()
                    << " filesz=" << std::dec << live_filesz
-                   << " memsz=" << live_len;
+                   << " memsz=" << vma.Length();
         offset += live_filesz;
         iovs.emplace_back(reinterpret_cast<void *>(live_start), live_filesz);
       }

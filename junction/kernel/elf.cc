@@ -112,22 +112,35 @@ Status<void> LoadOneSegment(MemoryMap &mm, JunctionFile &f, off_t map_off,
   if (phdr.flags & kFlagWrite) prot |= PROT_WRITE;
   if (phdr.flags & kFlagRead) prot |= PROT_READ;
 
+  // paddr encodes the byte offset within the VMA where file data begins.
+  // Used for stack segments where leading zero pages are trimmed by the sender.
+  // For all other segments paddr is 0 and the layout is unchanged.
+  uint64_t data_off = phdr.paddr;
+
   // Determine the layout.
   uintptr_t start = PageAlignDown(phdr.vaddr + map_off);
-  uintptr_t file_end = phdr.vaddr + map_off + phdr.filesz;
+  uintptr_t data_start = phdr.vaddr + map_off + data_off;
+  uintptr_t file_end = data_start + phdr.filesz;
   uintptr_t gap_end = PageAlign(file_end);
   uintptr_t mem_end = phdr.vaddr + map_off + phdr.memsz;
 
-  // Map the file part of the segment.
-  if (file_end > start) {
-    Status<void> ret =
-        f.MMapFixed(mm, reinterpret_cast<void *>(start), file_end - start, prot,
-                    MAP_DENYWRITE, PageAlignDown(phdr.offset));
+  // Map the leading anonymous region before file data (trimmed stack pages).
+  if (data_start > start) {
+    Status<void *> ret = mm.MMapAnonymous(reinterpret_cast<void *>(start),
+                                          data_start - start, prot, MAP_FIXED);
     if (unlikely(!ret)) return MakeError(ret);
   }
 
-  // Zero the gap
-  if (gap_end > file_end) {
+  // Map the file part of the segment.
+  if (phdr.filesz > 0) {
+    Status<void> ret = f.MMapFixed(
+        mm, reinterpret_cast<void *>(data_start), file_end - data_start, prot,
+        MAP_DENYWRITE, PageAlignDown(phdr.offset));
+    if (unlikely(!ret)) return MakeError(ret);
+  }
+
+  // Zero the gap between file_end and the next page boundary.
+  if (gap_end > file_end && phdr.filesz > 0) {
     if ((prot & PROT_WRITE) == 0) {
       Status<void> ret =
           mm.MProtect(reinterpret_cast<void *>(PageAlignDown(file_end)),
