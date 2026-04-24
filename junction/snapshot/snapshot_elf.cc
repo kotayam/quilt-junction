@@ -120,6 +120,7 @@ GetElfPHDRs(MemoryMap &mm, SnapshotContext &ctx) {
       if (live_filesz) {
         LOG(DEBUG) << "migration sender: Load PHDR vaddr=0x" << std::hex
                    << live_start << " type=" << vma.TypeString()
+                   << " prot=" << vma.ProtString()
                    << " filesz=" << std::dec << live_filesz
                    << " memsz=" << live_len;
         offset += live_filesz;
@@ -147,6 +148,7 @@ GetElfPHDRs(MemoryMap &mm, SnapshotContext &ctx) {
     if (filesz) {
       LOG(DEBUG) << "migration sender: Load PHDR vaddr=0x" << std::hex
                  << vma.start << " type=" << vma.TypeString()
+                 << " prot=" << vma.ProtString()
                  << " filesz=" << std::dec << filesz
                  << " memsz=" << vma.Length();
       offset += filesz;
