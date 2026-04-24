@@ -127,7 +127,7 @@ Status<void> LoadOneSegment(MemoryMap &mm, JunctionFile &f, off_t map_off,
   uintptr_t mem_end = phdr.vaddr + map_off + phdr.memsz;
 
   // Map the leading anonymous region before file data (trimmed stack pages).
-  if (data_start > start) {
+  if (data_off > 0 && data_start > start) {
     Status<void *> ret = mm.MMapAnonymous(reinterpret_cast<void *>(start),
                                           data_start - start, prot, MAP_FIXED);
     if (unlikely(!ret)) return MakeError(ret);
@@ -135,8 +135,9 @@ Status<void> LoadOneSegment(MemoryMap &mm, JunctionFile &f, off_t map_off,
 
   // Map the file part of the segment.
   if (phdr.filesz > 0) {
+    uintptr_t map_start = data_off > 0 ? data_start : start;
     Status<void> ret = f.MMapFixed(
-        mm, reinterpret_cast<void *>(data_start), file_end - data_start, prot,
+        mm, reinterpret_cast<void *>(map_start), file_end - map_start, prot,
         MAP_DENYWRITE, PageAlignDown(phdr.offset));
     if (unlikely(!ret)) return MakeError(ret);
   }
