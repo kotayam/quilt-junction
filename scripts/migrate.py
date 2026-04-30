@@ -5,9 +5,9 @@ Requires: scripts/build.sh (to build migration samples)
 Requires: iokerneld already running on each node (see README)
 
 Usage:
-  Node 0 (sender):    scripts/migrate.py sender <service_port>
-  Node 1 (receiver):  scripts/migrate.py receiver
-  Initiator:          scripts/migrate.py initiator <service_port>
+  Node 0 (sender):    scripts/migrate.py sender <port> [--src-ip IP --dst-ip IP]
+  Node 1 (receiver):  scripts/migrate.py receiver [--src-ip IP --dst-ip IP]
+  Initiator:          scripts/migrate.py initiator <port> [--src-ip IP --dst-ip IP]
 
 For kv_service (larger heap workload):
   Node 0 (sender):    scripts/migrate.py sender 8080 --service kv --num-keys 10000 --value-size 1024
@@ -19,6 +19,7 @@ import os
 import socket
 import subprocess
 import sys
+import tempfile
 import time
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -27,13 +28,32 @@ BUILD_DIR = os.path.join(ROOT_DIR, "build", "junction")
 JUNCTION_RUN = os.path.join(BUILD_DIR, "junction_run")
 JUNCTION_CTL = os.path.join(ROOT_DIR, "build", "junction-ctl", "junction-ctl")
 MIGRATION_BUILD_DIR = os.path.join(BUILD_DIR, "samples", "migration")
-SERVICE_CONFIG = os.path.join(MIGRATION_BUILD_DIR, "caladan_service.config")
-DST_CONFIG = os.path.join(MIGRATION_BUILD_DIR, "caladan_migration_dst.config")
 COUNTER_SVC = os.path.join(MIGRATION_BUILD_DIR, "counter_service")
 KV_SVC = os.path.join(MIGRATION_BUILD_DIR, "kv_service")
 
-SRC_IP = "10.10.1.1"
-DST_IP = "10.10.1.2"
+DEFAULT_SRC_IP = "10.10.1.1"
+DEFAULT_DST_IP = "10.10.1.2"
+
+CALADAN_CONFIG_COMMON = """\
+host_netmask 255.255.255.0
+runtime_kthreads 4
+runtime_spinning_kthreads 0
+runtime_guaranteed_kthreads 4
+runtime_priority lc
+runtime_quantum_us 0"""
+
+SRC_IP = DEFAULT_SRC_IP
+DST_IP = DEFAULT_DST_IP
+
+
+def generate_caladan_config(host_addr, host_gateway):
+    """Write a Caladan config to a temp file and return its path."""
+    content = f"host_addr {host_addr}\nhost_gateway {host_gateway}\n{CALADAN_CONFIG_COMMON}\n"
+    f = tempfile.NamedTemporaryFile(mode="w", suffix=".config",
+                                    prefix="caladan_", delete=False)
+    f.write(content)
+    f.close()
+    return f.name
 
 
 def send_cmd(ip, port, cmd, timeout=5):
@@ -63,6 +83,7 @@ def kill_leftover():
 
 def cmd_sender(port, skip_file_pages, verbose, service, num_keys, value_size):
     kill_leftover()
+    config = generate_caladan_config(SRC_IP, DST_IP)
     if service == "kv":
         svc_bin = KV_SVC
         svc_args = [str(port), str(num_keys), str(value_size)]
@@ -74,22 +95,29 @@ def cmd_sender(port, skip_file_pages, verbose, service, num_keys, value_size):
         print(f"==> Starting counter_service on {SRC_IP}:{port}")
     loglevel = "6" if verbose else "5"
     cmd = [
-        "sudo", "-E", JUNCTION_RUN, SERVICE_CONFIG, "--snapshot_enabled",
+        "sudo", "-E", JUNCTION_RUN, config, "--snapshot_enabled",
         "--loglevel", loglevel,
     ]
     if skip_file_pages:
         cmd.append("--skip_file_pages")
     cmd += ["--", svc_bin] + svc_args
-    subprocess.run(cmd)
+    try:
+        subprocess.run(cmd)
+    finally:
+        os.unlink(config)
 
 
 def cmd_receiver(verbose):
     kill_leftover()
+    config = generate_caladan_config(DST_IP, SRC_IP)
     print("==> Migration server listening on port 44")
     loglevel = "6" if verbose else "5"
-    cmd = ["sudo", "-E", JUNCTION_RUN, DST_CONFIG, "--snapshot_enabled",
+    cmd = ["sudo", "-E", JUNCTION_RUN, config, "--snapshot_enabled",
            "--loglevel", loglevel]
-    subprocess.run(cmd)
+    try:
+        subprocess.run(cmd)
+    finally:
+        os.unlink(config)
 
 
 def do_migrate(port, scatter_copy):
@@ -165,6 +193,13 @@ def cmd_initiator_kv(port, scatter_copy):
     print(f"\n==> Total migration time: {total_us:.1f} us")
 
 
+def add_ip_args(parser):
+    parser.add_argument("--src-ip", default=DEFAULT_SRC_IP,
+                        help=f"source node IP (default: {DEFAULT_SRC_IP})")
+    parser.add_argument("--dst-ip", default=DEFAULT_DST_IP,
+                        help=f"destination node IP (default: {DEFAULT_DST_IP})")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -173,6 +208,7 @@ def main():
 
     s = sub.add_parser("sender")
     s.add_argument("port", type=int)
+    add_ip_args(s)
     s.add_argument("--skip-file-pages", action="store_true",
                    help="skip file-backed read-only pages during migration")
     s.add_argument("--service", choices=["counter", "kv"], default="counter",
@@ -182,16 +218,22 @@ def main():
     s.add_argument("--value-size", type=int, default=1024,
                    help="value size in bytes (kv only, default: 1024)")
 
-    sub.add_parser("receiver")
+    r = sub.add_parser("receiver")
+    add_ip_args(r)
 
     i = sub.add_parser("initiator")
     i.add_argument("port", type=int)
+    add_ip_args(i)
     i.add_argument("--scatter-copy", action="store_true",
                    help="use scatter-copy migration instead of ELF format")
     i.add_argument("--service", choices=["counter", "kv"], default="counter",
                    help="service being migrated (default: counter)")
 
     args = parser.parse_args()
+
+    global SRC_IP, DST_IP
+    SRC_IP = args.src_ip
+    DST_IP = args.dst_ip
 
     if args.role == "sender":
         cmd_sender(args.port, args.skip_file_pages, args.v,
