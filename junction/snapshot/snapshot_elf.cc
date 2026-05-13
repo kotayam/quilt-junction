@@ -27,35 +27,8 @@ namespace junction {
 
 namespace {
 
-// Writes a uint64 in little-endian to the writer.
-Status<void> WriteU64LE(VectoredWriter &w, uint64_t v) {
-  iovec iov = {&v, sizeof(v)};
-  return WritevFull(w, {&iov, 1});
-}
-
-Status<void> WriteU8(VectoredWriter &w, uint8_t v) {
-  iovec iov = {&v, sizeof(v)};
-  return WritevFull(w, {&iov, 1});
-}
-
 // Returns true if the page at mem matches the file content at file_offset.
-bool PageMatchesFile(int fd, off_t file_offset, const void *mem) {
-  alignas(64) std::array<std::byte, kPageSize> buf;
-  ssize_t n = ksys_pread(fd, buf.data(), kPageSize, file_offset);
-  if (n != static_cast<ssize_t>(kPageSize)) return false;
-  return std::memcmp(mem, buf.data(), kPageSize) == 0;
-}
-
-// Returns true if every page of the VMA matches the backing file content.
-bool VMAMatchesFile(int fd, const VMArea &vma) {
-  for (uintptr_t page = vma.start; page < vma.start + vma.Length();
-       page += kPageSize) {
-    off_t file_off = vma.offset + (page - vma.start);
-    if (!PageMatchesFile(fd, file_off, reinterpret_cast<void *>(page)))
-      return false;
-  }
-  return true;
-}
+// (Defined in snapshot.h as inline)
 
 Status<std::tuple<std::vector<elf_phdr>, std::vector<iovec>,
                   std::vector<std::string>>>
@@ -125,7 +98,8 @@ GetElfPHDRs(MemoryMap &mm, SnapshotContext &ctx) {
     }
 
     // Stacks grow downward: trim leading zero pages and only transfer the
-    // live portion at the top, recording the offset into vaddr/memsz.
+    // live portion, but preserve the full VMA bounds so the stack can grow.
+    // paddr stores the offset from vaddr where file data begins.
     if (vma.type == VMType::kStack && filesz) {
       size_t stack_off =
           GetStackMinOffset(reinterpret_cast<void *>(vma.start), filesz);
@@ -137,18 +111,18 @@ GetElfPHDRs(MemoryMap &mm, SnapshotContext &ctx) {
           .type = kPTypeLoad,
           .flags = flags,
           .offset = offset,
-          .vaddr = live_start,
-          .paddr = 0,
+          .vaddr = vma.start,
+          .paddr = stack_off,
           .filesz = live_filesz,
-          .memsz = live_len,
+          .memsz = vma.Length(),
           .align = kPageSize,
       };
       phdrs.push_back(phdr);
       if (live_filesz) {
         LOG(DEBUG) << "migration sender: Load PHDR vaddr=0x" << std::hex
                    << live_start << " type=" << vma.TypeString()
-                   << " filesz=" << std::dec << live_filesz
-                   << " memsz=" << live_len;
+                   << " prot=" << vma.ProtString() << " filesz=" << std::dec
+                   << live_filesz << " memsz=" << vma.Length();
         offset += live_filesz;
         iovs.emplace_back(reinterpret_cast<void *>(live_start), live_filesz);
       }
@@ -174,8 +148,8 @@ GetElfPHDRs(MemoryMap &mm, SnapshotContext &ctx) {
     if (filesz) {
       LOG(DEBUG) << "migration sender: Load PHDR vaddr=0x" << std::hex
                  << vma.start << " type=" << vma.TypeString()
-                 << " filesz=" << std::dec << filesz
-                 << " memsz=" << vma.Length();
+                 << " prot=" << vma.ProtString() << " filesz=" << std::dec
+                 << filesz << " memsz=" << vma.Length();
       offset += filesz;
       iovs.emplace_back(reinterpret_cast<void *>(vma.start), filesz);
     }
@@ -306,43 +280,23 @@ Status<void> SnapshotProcToELF(Process *p, std::string_view metadata_path,
 }
 
 // Snapshots a process to a stream without touching the filesystem.
-// Stream format: [8-byte metadata length LE][metadata bytes][ELF bytes]
 Status<void> SnapshotProcToELFStream(Process *p, VectoredWriter &out) {
   LOG(INFO) << "snapshotting proc " << p->get_pid() << " to stream";
 
   StartSnapshotContext();
   auto f = finally([] { EndSnapshotContext(); });
 
-  // Serialize metadata into a buffer so we can length-prefix it.
   Time t0 = Time::Now();
-  std::vector<std::byte> metadata_buf;
-  {
-    rt::RuntimeLibcGuard guard;
-    struct VecWriter {
-      std::vector<std::byte> &buf;
-      Status<size_t> Write(std::span<const std::byte> src) {
-        buf.insert(buf.end(), src.begin(), src.end());
-        return src.size();
-      }
-    } vw{metadata_buf};
-    StreamBufferWriter<VecWriter> sbw(vw);
-    std::ostream outstream(&sbw);
-    cereal::BinaryOutputArchive ar(outstream);
-    if (Status<void> ret = FSSnapshot(ar); !ret) return ret;
-    ar(p->shared_from_this());
-    SerializeUnixSocketState(ar);
-  }
+  Status<std::vector<std::byte>> metadata_buf = SerializeSnapshotMetadata(p);
+  if (!metadata_buf) return MakeError(metadata_buf);
   Time t1 = Time::Now();
   LOG(INFO) << "migration sender: serialize took " << (t1 - t0).Microseconds()
-            << " us (" << metadata_buf.size() << " bytes)";
+            << " us (" << metadata_buf->size() << " bytes)";
 
   if (Status<void> ret =
-          WriteU8(out, static_cast<uint8_t>(MigrationType::kStopAndCopy));
+          WriteStreamPrefix(out, MigrationType::kStopAndCopy, *metadata_buf);
       !ret)
     return ret;
-  if (Status<void> ret = WriteU64LE(out, metadata_buf.size()); !ret) return ret;
-  iovec meta_iov = {metadata_buf.data(), metadata_buf.size()};
-  if (Status<void> ret = WritevFull(out, {&meta_iov, 1}); !ret) return ret;
 
   if (Status<void> ret =
           SnapshotElfToStream(p->get_mem_map(), GetSnapshotContext(), out);
@@ -425,72 +379,39 @@ Status<std::shared_ptr<Process>> RestoreProcessFromELF(
   return p;
 }
 
-// Restores a process from a stream produced by SnapshotProcToELFStream.
-// Stream format: [8-byte metadata length LE][metadata bytes][ELF bytes]
+// Restores a process from a migration stream. Dispatches on MigrationType.
 Status<std::shared_ptr<Process>> RestoreProcessFromELFStream(
     VectoredReader &in) {
   Time t0 = Time::Now();
   timings().migration_restore_start = t0;
 
-  // Read and dispatch on migration type.
-  uint8_t migration_type = 0;
-  iovec type_iov = {&migration_type, sizeof(migration_type)};
-  if (Status<void> ret = ReadvFull(in, {&type_iov, 1}); !ret)
-    return MakeError(ret);
-  if (migration_type != static_cast<uint8_t>(MigrationType::kStopAndCopy)) {
-    LOG(ERR) << "unsupported migration type: " << migration_type;
-    return MakeError(EINVAL);
-  }
-
-  // Read metadata length prefix.
-  uint64_t metadata_len = 0;
-  {
-    iovec iov = {&metadata_len, sizeof(metadata_len)};
-    if (Status<void> ret = ReadvFull(in, {&iov, 1}); !ret)
-      return MakeError(ret);
-  }
-
-  // Read metadata into a buffer.
-  std::vector<std::byte> metadata_buf(metadata_len);
-  {
-    iovec iov = {metadata_buf.data(), metadata_buf.size()};
-    if (Status<void> ret = ReadvFull(in, {&iov, 1}); !ret)
-      return MakeError(ret);
-  }
+  // Read stream prefix: type + metadata.
+  auto prefix = ReadStreamPrefix(in);
+  if (!prefix) return MakeError(prefix);
+  auto &[type, metadata_buf] = *prefix;
   Time t1 = Time::Now();
   LOG(INFO) << "migration receiver: metadata transfer took "
-            << (t1 - t0).Microseconds() << " us (" << metadata_len << " bytes)";
+            << (t1 - t0).Microseconds() << " us (" << metadata_buf.size()
+            << " bytes, " << (metadata_buf.size() / 1024) << " KiB)";
 
-  // Deserialize metadata — guard scoped here only, network reads above/below
-  // can block and must not run with preemption disabled.
-  std::shared_ptr<Process> p;
-  {
-    rt::RuntimeLibcGuard guard;
-    struct VecReader {
-      std::span<const std::byte> remaining;
-      Status<size_t> Read(std::span<std::byte> dst) {
-        size_t n = std::min(dst.size(), remaining.size());
-        std::copy_n(remaining.begin(), n, dst.begin());
-        remaining = remaining.subspan(n);
-        return n ? n : Status<size_t>(MakeError(EUNEXPECTEDEOF));
-      }
-    } vr{metadata_buf};
-    StreamBufferReader<VecReader> sbr(vr);
-    std::istream instream(&sbr);
-    cereal::BinaryInputArchive ar(instream);
-
-    if (Status<void> ret = FSRestore(ar); unlikely(!ret)) return MakeError(ret);
-    timings().restore_metadata_start = Time::Now();
-
-    ar(p);
-    SerializeUnixSocketState(ar);
-    timings().restore_data_start = Time::Now();
-  }
+  // Deserialize metadata.
+  auto p = DeserializeSnapshotMetadata(metadata_buf);
+  if (!p) return MakeError(p);
   Time t2 = Time::Now();
   LOG(INFO) << "migration receiver: metadata deserialize took "
             << (t2 - t1).Microseconds() << " us";
 
-  // Buffer the ELF data into a tmpfile so LoadELF can seek/mmap it.
+  // Dispatch on migration type.
+  if (type == MigrationType::kScatterCopy) {
+    return RestoreFromScatterStream(in, std::move(*p));
+  }
+
+  if (type != MigrationType::kStopAndCopy) {
+    LOG(ERR) << "unsupported migration type: " << static_cast<int>(type);
+    return MakeError(EINVAL);
+  }
+
+  // ELF restore path: buffer to tmpfile, then LoadELF.
   Status<KernelFile> tmp =
       KernelFile::Open("/tmp/junction_migrate.elf", O_CREAT | O_TRUNC,
                        FileMode::kReadWrite, 0600);
@@ -511,15 +432,16 @@ Status<std::shared_ptr<Process>> RestoreProcessFromELFStream(
   }
   Time t3 = Time::Now();
   LOG(INFO) << "migration receiver: ELF transfer took "
-            << (t3 - t2).Microseconds() << " us (" << elf_bytes << " bytes)";
+            << (t3 - t2).Microseconds() << " us (" << elf_bytes << " bytes, "
+            << (elf_bytes / 1024) << " KiB)";
 
   Status<JunctionFile> elf = JunctionFile::Open(
-      p->get_fs(), "/tmp/junction_migrate.elf", 0, FileMode::kRead);
+      (*p)->get_fs(), "/tmp/junction_migrate.elf", 0, FileMode::kRead);
   if (unlikely(!elf)) return MakeError(elf);
 
   MemoryMap mm(nullptr, kMemoryMappingSize);
   mm.MarkAsFake();
-  Status<elf_data> ret = LoadELF(mm, *elf, p->get_fs());
+  Status<elf_data> ret = LoadELF(mm, *elf, (*p)->get_fs());
   if (GetCfg().restore_populate()) {
     mm.ForEachVMA([](const VMArea &vma) {
       if (!(vma.prot & PROT_READ)) return;
@@ -537,11 +459,12 @@ Status<std::shared_ptr<Process>> RestoreProcessFromELFStream(
   LOG(INFO) << "migration receiver: total took " << (t4 - t0).Microseconds()
             << " us";
 
-  if (unlikely(GetCfg().mem_trace())) p->get_mem_map().EnableTracing(*p.get());
+  if (unlikely(GetCfg().mem_trace()))
+    (*p)->get_mem_map().EnableTracing(*(*p).get());
 
   timings().migration_restore_done = Time::Now();
-  p->RunThreads();
-  return p;
+  (*p)->RunThreads();
+  return std::move(*p);
 }
 
 }  // namespace junction

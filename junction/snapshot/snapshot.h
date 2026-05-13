@@ -10,6 +10,8 @@ extern "C" {
 #include "lib/caladan/runtime/defs.h"
 }
 
+#include <array>
+#include <cstring>
 #include <span>
 #include <string>
 #include <string_view>
@@ -18,6 +20,7 @@ extern "C" {
 #include "junction/base/arch.h"
 #include "junction/base/bits.h"
 #include "junction/base/error.h"
+#include "junction/base/io.h"
 #include "junction/base/time.h"
 #include "junction/bindings/net.h"
 #include "junction/kernel/elf.h"
@@ -142,7 +145,58 @@ Status<void> TakeSnapshot(Process *p);
  */
 enum class MigrationType : uint8_t {
   kStopAndCopy = 1,
+  kScatterCopy = 2,
 };
+
+/**
+ * Shared migration stream helpers
+ */
+
+// Write a uint64 in little-endian to a vectored writer.
+inline Status<void> WriteU64LE(VectoredWriter &w, uint64_t v) {
+  iovec iov = {&v, sizeof(v)};
+  return WritevFull(w, {&iov, 1});
+}
+
+// Write a single byte to a vectored writer.
+inline Status<void> WriteU8(VectoredWriter &w, uint8_t v) {
+  iovec iov = {&v, sizeof(v)};
+  return WritevFull(w, {&iov, 1});
+}
+
+// Returns true if the page at mem matches the file content at file_offset.
+inline bool PageMatchesFile(int fd, off_t file_offset, const void *mem) {
+  alignas(64) std::array<std::byte, kPageSize> buf;
+  ssize_t n = ksys_pread(fd, buf.data(), kPageSize, file_offset);
+  if (n != static_cast<ssize_t>(kPageSize)) return false;
+  return std::memcmp(mem, buf.data(), kPageSize) == 0;
+}
+
+// Returns true if every page of the VMA matches the backing file content.
+inline bool VMAMatchesFile(int fd, const VMArea &vma) {
+  for (uintptr_t page = vma.start; page < vma.start + vma.Length();
+       page += kPageSize) {
+    off_t file_off = vma.offset + (page - vma.start);
+    if (!PageMatchesFile(fd, file_off, reinterpret_cast<void *>(page)))
+      return false;
+  }
+  return true;
+}
+
+// Serialize process metadata (FS + Process + Unix sockets) into a byte buffer.
+Status<std::vector<std::byte>> SerializeSnapshotMetadata(Process *p);
+
+// Deserialize process metadata from a byte buffer. Returns the Process.
+Status<std::shared_ptr<Process>> DeserializeSnapshotMetadata(
+    std::span<const std::byte> buf);
+
+// Write the stream prefix: [1-byte type][8-byte metadata_len][metadata].
+Status<void> WriteStreamPrefix(VectoredWriter &out, MigrationType type,
+                               std::span<const std::byte> metadata);
+
+// Read the stream prefix: type byte + length-prefixed metadata buffer.
+Status<std::pair<MigrationType, std::vector<std::byte>>> ReadStreamPrefix(
+    VectoredReader &in);
 
 /**
  * ELF utilities
@@ -154,16 +208,26 @@ Status<void> SnapshotProcToELF(Process *p, std::string_view metadata_path,
                                std::string_view elf_path);
 
 // Snapshots a process directly to a stream (diskless).
-// Stream format: [1-byte MigrationType][8-byte metadata length LE][metadata
-// bytes][ELF bytes]
+// Stream format (kStopAndCopy): [1-byte MigrationType][8-byte metadata length
+// LE][metadata bytes][ELF bytes]
 Status<void> SnapshotProcToELFStream(Process *p, VectoredWriter &out);
 
 Status<std::shared_ptr<Process>> RestoreProcessFromELF(
     std::string_view metadata_path, std::string_view elf_path);
 
-// Restores a process from a stream produced by SnapshotProcToELFStream.
+// Restores a process from a stream (dispatches on MigrationType).
 Status<std::shared_ptr<Process>> RestoreProcessFromELFStream(
     VectoredReader &in);
+
+/**
+ * Scatter-copy migration (skip ELF format entirely)
+ * Stream format (kScatterCopy): [1-byte MigrationType][8-byte metadata length
+ * LE][metadata bytes][MigrateHeader][MigrateSegment × N][kLoad page
+ * data][kFileRef path strings]
+ */
+Status<void> SnapshotProcToScatterStream(Process *p, VectoredWriter &out);
+Status<std::shared_ptr<Process>> RestoreFromScatterStream(
+    VectoredReader &in, std::shared_ptr<Process> p);
 
 /**
  * JIF utilities

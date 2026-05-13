@@ -5,6 +5,7 @@ add_library(snapshot
   snapshot.cc
   snapshot_elf.cc
   snapshot_jif.cc
+  snapshot_scatter.cc
 )
 
 target_link_libraries(snapshot

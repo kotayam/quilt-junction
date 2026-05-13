@@ -31,3 +31,7 @@ file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/caladan_migration_dst.config
 add_executable(counter_service
   counter_service.cc
 )
+
+add_executable(kv_service
+  kv_service.cc
+)
